@@ -97,7 +97,7 @@ export function createDbHandle(options: CreateDbOptions = {}): DbHandle {
 }
 
 declare global {
-  // eslint-disable-next-line no-var -- globalThis augmentation requires `var`
+  // `var` is required for a globalThis augmentation.
   var __repairTrackerDb: DbHandle | undefined;
 }
 
