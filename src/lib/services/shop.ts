@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import { getDb, type Database } from "../db";
 import { shops, type ShopRow } from "../db/schema";
@@ -12,8 +12,16 @@ export async function getShopById(shopId: string, db: Database = getDb()): Promi
   return shop ?? null;
 }
 
-/** Used by public pages, which have no session to derive the shop from. */
+/**
+ * Used by public pages, which have no session to derive the shop from.
+ * v1 has exactly one shop; ordering by (createdAt, id) keeps the choice
+ * deterministic even if a second row ever appears.
+ */
 export async function getPrimaryShop(db: Database = getDb()): Promise<ShopRow | null> {
-  const [shop] = await db.select().from(shops).orderBy(shops.createdAt).limit(1);
+  const [shop] = await db
+    .select()
+    .from(shops)
+    .orderBy(asc(shops.createdAt), asc(shops.id))
+    .limit(1);
   return shop ?? null;
 }

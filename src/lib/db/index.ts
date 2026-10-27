@@ -72,7 +72,9 @@ export function createDbHandle(options: CreateDbOptions = {}): DbHandle {
     };
   }
 
-  const dataDir = options.dataDir === undefined ? DEFAULT_PGLITE_DIR : options.dataDir;
+  // `PGLITE_DIR` lets tests/CI run an isolated embedded database.
+  const dataDir =
+    options.dataDir === undefined ? (process.env.PGLITE_DIR?.trim() || DEFAULT_PGLITE_DIR) : options.dataDir;
   if (dataDir.length > 0) {
     // PGlite creates the leaf directory but not its parents.
     mkdirSync(dirname(dataDir), { recursive: true });

@@ -2,8 +2,20 @@ import { FlatCompat } from "@eslint/eslintrc";
 
 const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
 
-export default [
-  { ignores: [".next/**", "node_modules/**", ".data/**", "coverage/**", "playwright-report/**"] },
+const config = [
+  {
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      ".data/**",
+      "coverage/**",
+      "playwright-report/**",
+      "test-results/**",
+      "next-env.d.ts",
+      "public/sw.js",
+      "scripts/**/*.mjs",
+    ],
+  },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {
@@ -17,3 +29,5 @@ export default [
   },
   { files: ["scripts/**", "tests/**"], rules: { "no-console": "off" } },
 ];
+
+export default config;
