@@ -7,11 +7,7 @@ import { RATE_LIMITS } from "./config";
 import { UnauthorizedError } from "./errors";
 import { getClientIp } from "./http";
 import { logInfo, logWarn } from "./logger";
-import {
-  isAcceptablePassword,
-  simulatePasswordCheck,
-  verifyPassword,
-} from "./password";
+import { isAcceptablePassword, simulatePasswordCheck, verifyPassword } from "./password";
 import { bucketKey, isRateLimited, recordRateLimitEvent } from "./rate-limit";
 import { credentialsSchema } from "./schemas/public";
 import { findUserByEmail } from "./services/users";
@@ -65,29 +61,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!user) {
           await simulatePasswordCheck(parsed.data.password);
-          await Promise.all([
-            recordRateLimitEvent(ipBucket),
-            recordRateLimitEvent(emailBucket),
-          ]);
+          await Promise.all([recordRateLimitEvent(ipBucket), recordRateLimitEvent(emailBucket)]);
           logWarn("auth.failed", { reason: "unknown_email" });
           return null;
         }
 
         if (!isAcceptablePassword(parsed.data.password)) {
-          await Promise.all([
-            recordRateLimitEvent(ipBucket),
-            recordRateLimitEvent(emailBucket),
-          ]);
+          await Promise.all([recordRateLimitEvent(ipBucket), recordRateLimitEvent(emailBucket)]);
           logWarn("auth.failed", { reason: "invalid_password_shape" });
           return null;
         }
 
         const valid = await verifyPassword(user.passwordHash, parsed.data.password);
         if (!valid) {
-          await Promise.all([
-            recordRateLimitEvent(ipBucket),
-            recordRateLimitEvent(emailBucket),
-          ]);
+          await Promise.all([recordRateLimitEvent(ipBucket), recordRateLimitEvent(emailBucket)]);
           logWarn("auth.failed", { reason: "wrong_password" });
           return null;
         }

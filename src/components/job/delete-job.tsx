@@ -40,11 +40,23 @@ export function DeleteJob({ job }: { job: OwnerJobResponse }) {
   }
 
   return (
-    <section aria-labelledby="danger-heading" className="flex flex-col gap-3 rounded-card border border-danger/30 p-4">
-      <h2 id="danger-heading" className="text-small font-semibold uppercase tracking-wide text-danger">
+    <section
+      aria-labelledby="danger-heading"
+      className="flex flex-col gap-3 rounded-card border border-danger/30 p-4"
+    >
+      <h2
+        id="danger-heading"
+        className="text-small font-semibold uppercase tracking-wide text-danger"
+      >
         {copy.jobDetail.dangerZone}
       </h2>
-      <Button type="button" variant="danger" size="md" onClick={() => setOpen(true)} disabled={busy}>
+      <Button
+        type="button"
+        variant="danger"
+        size="md"
+        onClick={() => setOpen(true)}
+        disabled={busy}
+      >
         <Trash2 aria-hidden="true" className="h-4 w-4" />
         {copy.jobDetail.deleteJob}
       </Button>

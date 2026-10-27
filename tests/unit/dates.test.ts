@@ -89,7 +89,12 @@ describe("formatLongDate / formatTime", () => {
 describe("describeExpectedReady", () => {
   it("reports an upcoming date", () => {
     const info = describeExpectedReady("2026-10-30", "2026-10-27");
-    expect(info).toMatchObject({ daysAway: 3, isToday: false, isOverdue: false, humanDate: "30 Oct" });
+    expect(info).toMatchObject({
+      daysAway: 3,
+      isToday: false,
+      isOverdue: false,
+      humanDate: "30 Oct",
+    });
   });
 
   it("reports today", () => {

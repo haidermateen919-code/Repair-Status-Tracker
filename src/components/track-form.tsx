@@ -119,7 +119,11 @@ export function TrackForm({ shopWhatsappPhone }: { shopWhatsappPhone: string | n
       <p className="text-small text-ink-muted">{copy.track.privacyNote}</p>
 
       {state.kind === "rate-limited" ? (
-        <EmptyState icon={SearchX} title={copy.track.rateLimitedTitle} body={copy.track.rateLimitedBody} />
+        <EmptyState
+          icon={SearchX}
+          title={copy.track.rateLimitedTitle}
+          body={copy.track.rateLimitedBody}
+        />
       ) : null}
 
       {state.kind === "error" ? (

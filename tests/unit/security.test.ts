@@ -13,7 +13,12 @@ import {
 } from "@/lib/errors";
 import { bucketKey } from "@/lib/rate-limit";
 import { buildTimelineItems } from "@/lib/timeline";
-import { isAcceptablePassword, hashPassword, simulatePasswordCheck, verifyPassword } from "@/lib/password";
+import {
+  isAcceptablePassword,
+  hashPassword,
+  simulatePasswordCheck,
+  verifyPassword,
+} from "@/lib/password";
 
 describe("error mapping", () => {
   it("keeps typed errors intact", () => {
@@ -70,7 +75,10 @@ describe("passwords", () => {
   });
 
   it("produces a different hash every time (salted)", async () => {
-    const [a, b] = await Promise.all([hashPassword("same-password"), hashPassword("same-password")]);
+    const [a, b] = await Promise.all([
+      hashPassword("same-password"),
+      hashPassword("same-password"),
+    ]);
     expect(a).not.toBe(b);
   });
 
@@ -92,7 +100,11 @@ describe("passwords", () => {
 describe("timeline building", () => {
   const events = [
     { status: "READY" as const, publicNote: null, at: new Date("2026-10-30T09:00:00.000Z") },
-    { status: null, publicNote: "Part order kar diya hai", at: new Date("2026-10-28T09:00:00.000Z") },
+    {
+      status: null,
+      publicNote: "Part order kar diya hai",
+      at: new Date("2026-10-28T09:00:00.000Z"),
+    },
   ];
 
   it("labels status events for the owner", () => {

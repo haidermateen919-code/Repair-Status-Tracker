@@ -1,11 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  bucketKey,
-  consumeRateLimit,
-  isRateLimited,
-  recordRateLimitEvent,
-} from "@/lib/rate-limit";
+import { bucketKey, consumeRateLimit, isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
 import { RATE_LIMITS } from "@/lib/config";
 import { createTestDatabase, type TestDatabase } from "./helpers";
 
@@ -49,8 +44,14 @@ describe("consumeRateLimit", () => {
   });
 
   it("keeps buckets independent (one phone cannot block another)", async () => {
-    const phoneA = { key: bucketKey("lookup-phone", "+923001234567"), ...RATE_LIMITS.lookupPerPhone };
-    const phoneB = { key: bucketKey("lookup-phone", "+923009876543"), ...RATE_LIMITS.lookupPerPhone };
+    const phoneA = {
+      key: bucketKey("lookup-phone", "+923001234567"),
+      ...RATE_LIMITS.lookupPerPhone,
+    };
+    const phoneB = {
+      key: bucketKey("lookup-phone", "+923009876543"),
+      ...RATE_LIMITS.lookupPerPhone,
+    };
 
     for (let index = 0; index < phoneA.limit; index += 1) {
       await consumeRateLimit(phoneA);

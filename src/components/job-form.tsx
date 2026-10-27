@@ -15,7 +15,8 @@ import { LIMITS } from "@/lib/config";
 import { createJobSchema } from "@/lib/schemas/job";
 import type { CreateJobResponse } from "@/types/contracts";
 
-type FieldName = "customerName" | "customerPhone" | "itemName" | "issue" | "estimateDays" | "internalNote";
+type FieldName =
+  "customerName" | "customerPhone" | "itemName" | "issue" | "estimateDays" | "internalNote";
 type FieldErrors = Partial<Record<FieldName, string>>;
 
 /** Maps schema failures onto the shop owner's language, not developer text. */
@@ -28,14 +29,22 @@ function mapErrors(error: ZodError): FieldErrors {
 
     switch (field) {
       case "customerName":
-        errors[field] = issue.code === "too_big" ? copy.newJob.validation.nameTooLong : copy.newJob.validation.nameRequired;
+        errors[field] =
+          issue.code === "too_big"
+            ? copy.newJob.validation.nameTooLong
+            : copy.newJob.validation.nameRequired;
         break;
       case "customerPhone":
         errors[field] =
-          issue.code === "too_small" ? copy.newJob.validation.phoneRequired : copy.newJob.validation.phoneInvalid;
+          issue.code === "too_small"
+            ? copy.newJob.validation.phoneRequired
+            : copy.newJob.validation.phoneInvalid;
         break;
       case "itemName":
-        errors[field] = issue.code === "too_big" ? copy.newJob.validation.itemTooLong : copy.newJob.validation.itemRequired;
+        errors[field] =
+          issue.code === "too_big"
+            ? copy.newJob.validation.itemTooLong
+            : copy.newJob.validation.itemRequired;
         break;
       case "issue":
         errors[field] = copy.newJob.validation.issueTooLong;
@@ -105,7 +114,9 @@ export function JobForm() {
       const firstField = (Object.keys(mapped) as FieldName[])[0];
       if (firstField) {
         document
-          .getElementById(fieldDomId(firstField, { nameId, phoneId, itemId, issueId, daysId, noteId }))
+          .getElementById(
+            fieldDomId(firstField, { nameId, phoneId, itemId, issueId, daysId, noteId }),
+          )
           ?.focus();
       }
       return;
@@ -205,7 +216,12 @@ export function JobForm() {
         ))}
       </div>
 
-      <Field id={issueId} label={copy.newJob.issueLabel} optionalLabel={copy.common.optional} error={errors.issue}>
+      <Field
+        id={issueId}
+        label={copy.newJob.issueLabel}
+        optionalLabel={copy.common.optional}
+        error={errors.issue}
+      >
         <Textarea
           id={issueId}
           name="issue"
@@ -301,7 +317,14 @@ export function JobForm() {
 
 function fieldDomId(
   field: FieldName,
-  ids: { nameId: string; phoneId: string; itemId: string; issueId: string; daysId: string; noteId: string },
+  ids: {
+    nameId: string;
+    phoneId: string;
+    itemId: string;
+    issueId: string;
+    daysId: string;
+    noteId: string;
+  },
 ): string {
   switch (field) {
     case "customerName":

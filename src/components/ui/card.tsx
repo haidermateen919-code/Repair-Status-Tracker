@@ -4,7 +4,9 @@ import { cn } from "@/lib/cn";
 
 /** Cards use a 12px radius and a 1px border instead of shadows (PRD §5.1). */
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-card border border-line bg-background", className)} {...props} />;
+  return (
+    <div className={cn("rounded-card border border-line bg-background", className)} {...props} />
+  );
 }
 
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

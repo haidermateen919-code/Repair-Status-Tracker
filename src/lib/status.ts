@@ -104,8 +104,7 @@ export function isPrimaryStatus(status: JobStatus): boolean {
 }
 
 export type TransitionCheck =
-  | { allowed: true }
-  | { allowed: false; reason: "REOPEN_REQUIRES_CONFIRMATION" };
+  { allowed: true } | { allowed: false; reason: "REOPEN_REQUIRES_CONFIRMATION" };
 
 /**
  * One function decides whether a status change is allowed (PRD §7.6 rule 30).

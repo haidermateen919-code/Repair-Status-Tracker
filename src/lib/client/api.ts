@@ -40,7 +40,9 @@ export async function apiRequest<T>(url: string, init?: RequestInit): Promise<T>
   }
 
   if (!response.ok) {
-    const errorBody = body as { error?: { code?: string; message?: string; details?: Record<string, string> } } | null;
+    const errorBody = body as {
+      error?: { code?: string; message?: string; details?: Record<string, string> };
+    } | null;
     throw new ApiClientError(
       errorBody?.error?.code ?? "INTERNAL",
       response.status,

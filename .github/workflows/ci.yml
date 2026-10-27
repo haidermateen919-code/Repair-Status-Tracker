@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Typecheck, lint, tests, build
+    runs-on: ubuntu-latest
+    env:
+      AUTH_SECRET: ci-only-secret-value-that-is-long-enough-1234567890
+      DATABASE_URL: ""
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+
+      - name: Unit + integration tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: End-to-end flows (production build over HTTP)
+        env:
+          AUTH_SECRET: ci-only-secret-value-that-is-long-enough-1234567890
+        run: npm run test:e2e
+
+      - name: Dependency audit (no high/critical)
+        run: npm audit --audit-level=high

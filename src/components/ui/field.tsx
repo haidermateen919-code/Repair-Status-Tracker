@@ -23,7 +23,10 @@ export function Field({ id, label, hint, error, optionalLabel, className, childr
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <label htmlFor={id} className="flex items-baseline justify-between gap-2 text-small font-medium">
+      <label
+        htmlFor={id}
+        className="flex items-baseline justify-between gap-2 text-small font-medium"
+      >
         <span>{label}</span>
         {optionalLabel ? <span className="text-ink-muted">{optionalLabel}</span> : null}
       </label>

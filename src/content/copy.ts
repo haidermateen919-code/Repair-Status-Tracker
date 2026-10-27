@@ -54,10 +54,7 @@ const status: Record<JobStatus, StatusCopy> = {
 export const copy = {
   app: {
     name: "Repair Status Tracker",
-    shortName: "Repairs",
     description: "Apni cheez ki repair ka status dekhein.",
-    ownerArea: "Dukaan",
-    customerArea: "Customer",
   },
 
   common: {
@@ -73,13 +70,11 @@ export const copy = {
     whatsapp: "WhatsApp",
     back: "Wapas",
     tryAgain: "Dobara try karein",
-    loading: "Loading…",
     optional: "optional",
     none: "—",
     confirm: "Confirm",
     more: "More",
     delete: "Delete",
-    deleting: "Deleting…",
     required: "Required",
   },
 
@@ -103,16 +98,11 @@ export const copy = {
       "Email ya password theek nahi hai. Agar bohat zyada koshishein kar li hain to 15 minute baad try karein.",
     genericError: "Login nahi ho saka. Internet check karke dobara try karein.",
     missingFields: "Email aur password dono likhein.",
-    signedOut: "Aap log out ho gaye hain.",
-    sessionExpired: "Session khatam ho gaya. Dobara login karein.",
   },
 
   dashboard: {
     title: "Jobs",
-    greeting: (shopName: string) => shopName,
     counts: (active: number, ready: number) => `Active ${active} · Ready ${ready}`,
-    activeCount: (count: number) => `Active ${count}`,
-    readyCount: (count: number) => `Ready ${count}`,
     tabs: {
       active: "Active",
       ready: "Ready",
@@ -121,7 +111,6 @@ export const copy = {
     },
     searchLabel: "Search jobs",
     searchPlaceholder: "Naam, number, cheez ya #job",
-    searchSubmit: "Search",
     searchClear: "Clear search",
     newJob: "+ Naya job",
     emptyTitle: "Abhi koi repair nahi.",
@@ -136,7 +125,6 @@ export const copy = {
     jobNumber: (jobNumber: number) => `#${jobNumber}`,
     expectedPrefix: "expected:",
     expectedMissing: "—",
-    overdueChip: "overdue",
     share: "WhatsApp",
     openJob: (jobNumber: number) => `Job #${jobNumber} kholein`,
   },
@@ -173,7 +161,6 @@ export const copy = {
       issueTooLong: "Fault bohat lamba hai (300 harf tak).",
       noteTooLong: "Note bohat lamba hai (300 harf tak).",
       estimateRange: "Din 1 se 30 ke darmiyan likhein.",
-      expectedInvalid: "Date theek nahi.",
     },
     submitError: "Job save nahi hui. Internet check karke dobara try karein.",
   },
@@ -182,8 +169,6 @@ export const copy = {
     backToJobs: "Wapas jobs par",
     jobNumber: (jobNumber: number) => `Job #${jobNumber}`,
     createdLabel: "Created",
-    createdOn: (date: string) => `Created ${date}`,
-    callCustomer: "Call",
     itemLabel: "Item",
     issueLabel: "Fault",
     issueMissing: "—",
@@ -192,7 +177,8 @@ export const copy = {
     updateStatusError: "Status save nahi hua. Dobara try karein.",
     cancelJob: "Cancel job",
     cancelJobConfirmTitle: "Job cancel karein?",
-    cancelJobConfirmBody: "Customer ko cancel status dikhega. Aap baad mein dobara khol sakte hain.",
+    cancelJobConfirmBody:
+      "Customer ko cancel status dikhega. Aap baad mein dobara khol sakte hain.",
     cancelJobConfirm: "Haan, cancel karein",
     reopenJobConfirmTitle: "Job dobara kholein?",
     reopenJobConfirmBody:
@@ -216,9 +202,7 @@ export const copy = {
     shareUpdate: "Customer ko batao",
     timelineTitle: "Timeline",
     timelineEmpty: "Abhi koi update nahi.",
-    timelineStatusChanged: (statusLabel: string) => `Status: ${statusLabel}`,
     timelineNoteUpdated: "Public note updated",
-    timelineExpectedUpdated: "Expected date set",
     dangerZone: "Danger zone",
     deleteJob: "Delete job",
     deleteJobConfirmTitle: "Job delete karein?",
@@ -254,11 +238,9 @@ export const copy = {
     whatsappShop: "WhatsApp",
     callShop: "Call",
     lostLink: "Link kho gaya? Number se try karein",
-    trackCta: "Phone number se dekhein",
     invalidTitle: "Yeh link kaam nahi kar raha.",
     invalidBody: "Phone number se try karein.",
     invalidCta: "Phone number se dekhein",
-    refreshOnFocus: "Status refresh hua",
   },
 
   track: {
@@ -286,13 +268,10 @@ export const copy = {
     genericBody: "Dobara try karein.",
     notFoundTitle: "Safha nahi mila.",
     notFoundBody: "Yeh page mojood nahi hai.",
-    forbiddenTitle: "Ijazat nahi hai.",
-    forbiddenBody: "Pehle login karein.",
     offline: "Internet nahi hai",
     offlineBody: "Connection wapas aane par form dobara try karein.",
     validation: "Kuch fields theek nahi hain.",
     rateLimited: "Bohat zyada koshishein. Thodi der baad try karein.",
-    submitFailed: "Save nahi hua. Dobara try karein.",
   },
 
   status,
@@ -315,10 +294,6 @@ export const copy = {
       publicUrl: string;
     }) =>
       `${params.customerName}, aap ki ${params.itemName} (#${params.jobNumber}) ka status update: ${params.statusLabel}\n${params.publicUrl}`,
-  },
-
-  pwa: {
-    installHint: "Home screen par add karein",
   },
 } as const;
 

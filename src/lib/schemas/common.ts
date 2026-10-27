@@ -4,9 +4,7 @@ import { isIsoDate } from "../dates";
 import { normalisePhone } from "../phone";
 
 /** Opaque row id produced by `createId()` (12 random bytes, base64url). */
-export const rowIdSchema = z
-  .string()
-  .regex(/^[A-Za-z0-9_-]{16}$/, "Invalid id");
+export const rowIdSchema = z.string().regex(/^[A-Za-z0-9_-]{16}$/, "Invalid id");
 
 /** Date-only string. Rejects impossible dates such as 2026-02-31. */
 export const isoDateSchema = z
@@ -27,17 +25,20 @@ export const phoneInputSchema = z
  * "leave it alone".
  */
 export function nullableText(max: number) {
-  return z
-    .string()
-    .trim()
-    .max(max, `Must be ${max} characters or fewer`)
-    .nullable()
-    .optional()
-    .transform((value) => {
-      if (value === undefined) return undefined;
-      if (value === null) return null;
-      return value.length === 0 ? null : value;
-    });
+  return (
+    z
+      .string()
+      .trim()
+      .max(max, `Must be ${max} characters or fewer`)
+      .nullable()
+      .transform((value) => {
+        if (value === null) return null;
+        return value.length === 0 ? null : value;
+      })
+      // Optionality is re-applied after the transform so `z.infer` knows the
+      // field may be absent (undefined = "leave unchanged").
+      .optional()
+  );
 }
 
 /** Integer within a range, with empty strings treated as "not provided". */

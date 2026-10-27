@@ -62,11 +62,13 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ t
         aria-labelledby="current-status"
         className={cn("rounded-card border p-5", theme.panelClassName)}
       >
-        <p className="text-small font-medium uppercase tracking-wide">{copy.publicStatus.statusLabel}</p>
+        <h2 id="current-status" className="text-small font-medium uppercase tracking-wide">
+          {copy.publicStatus.statusLabel}
+        </h2>
         <div className="mt-1 flex items-center gap-2">
           <StatusChip status={job.status} />
         </div>
-        <p id="current-status" lang="ur-Latn" className="mt-3 text-status font-semibold text-ink">
+        <p lang="ur-Latn" className="mt-3 text-status font-semibold text-ink">
           {copy.status[job.status].customerMessage}
         </p>
 
@@ -109,7 +111,9 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ t
               {job.issue ?? copy.common.none}
             </dd>
           </dl>
-          <p className="text-small text-ink-muted">{copy.publicStatus.updatedAt(formatLongDate(job.updatedAt))}</p>
+          <p className="text-small text-ink-muted">
+            {copy.publicStatus.updatedAt(formatLongDate(job.updatedAt))}
+          </p>
         </CardBody>
       </Card>
 

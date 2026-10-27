@@ -137,7 +137,16 @@ describe("POST /api/public/lookup", () => {
 
   it("rejects cross-origin submissions", async () => {
     const response = await lookupPost(
-      lookupRequest({ phone: "03001234567" }, { headers: { "Content-Type": "application/json", origin: "https://evil.example", host: "localhost:3000" } }),
+      lookupRequest(
+        { phone: "03001234567" },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            origin: "https://evil.example",
+            host: "localhost:3000",
+          },
+        },
+      ),
     );
     expect(response.status).toBe(400);
   });
@@ -175,21 +184,31 @@ describe("POST /api/public/lookup", () => {
   it("limits per phone number across different IPs", async () => {
     for (let index = 0; index < RATE_LIMITS.lookupPerPhone.limit; index += 1) {
       const response = await lookupPost(
-        lookupRequest({ phone: "03001234567" }, {
-          headers: {
-            "Content-Type": "application/json",
-            "x-forwarded-for": `198.51.100.${index + 1}`,
-            ...ORIGIN,
+        lookupRequest(
+          { phone: "03001234567" },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "x-forwarded-for": `198.51.100.${index + 1}`,
+              ...ORIGIN,
+            },
           },
-        }),
+        ),
       );
       expect(response.status).toBe(200);
     }
 
     const blocked = await lookupPost(
-      lookupRequest({ phone: "+923001234567" }, {
-        headers: { "Content-Type": "application/json", "x-forwarded-for": "198.51.100.99", ...ORIGIN },
-      }),
+      lookupRequest(
+        { phone: "+923001234567" },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "x-forwarded-for": "198.51.100.99",
+            ...ORIGIN,
+          },
+        },
+      ),
     );
     expect(blocked.status).toBe(429);
   });

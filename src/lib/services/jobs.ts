@@ -4,7 +4,12 @@ import { PAGE_SIZES } from "../config";
 import { getDb, type Database } from "../db";
 import { jobEvents, jobs, shops, type JobEventRow, type JobRow } from "../db/schema";
 import { expectedDateFromDays } from "../dates";
-import { JobDeletedError, NotFoundError, ReopenConfirmationError, ValidationError } from "../errors";
+import {
+  JobDeletedError,
+  NotFoundError,
+  ReopenConfirmationError,
+  ValidationError,
+} from "../errors";
 import { normalisePhone } from "../phone";
 import type { CreateJobInput, JobListFilter, UpdateJobInput } from "../schemas/job";
 import { generatePublicToken } from "../tokens";
@@ -41,7 +46,8 @@ export async function createJob(
     if (!shop) throw new NotFoundError("Shop not found");
 
     const expectedReadyAt =
-      input.expectedReadyAt ?? (input.estimateDays ? expectedDateFromDays(input.estimateDays) : null);
+      input.expectedReadyAt ??
+      (input.estimateDays ? expectedDateFromDays(input.estimateDays) : null);
 
     const [job] = await tx
       .insert(jobs)
@@ -245,7 +251,9 @@ export async function updateJob(
       updates.estimateDays = patch.estimateDays;
       if (patch.expectedReadyAt === undefined) {
         updates.expectedReadyAt =
-          patch.estimateDays === null ? existing.expectedReadyAt : expectedDateFromDays(patch.estimateDays);
+          patch.estimateDays === null
+            ? existing.expectedReadyAt
+            : expectedDateFromDays(patch.estimateDays);
       }
     }
 

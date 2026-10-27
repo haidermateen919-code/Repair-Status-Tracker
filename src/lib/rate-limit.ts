@@ -10,8 +10,7 @@ import { logWarn } from "./logger";
  */
 
 export type RateLimitResult =
-  | { allowed: true; remaining: number }
-  | { allowed: false; retryAfterSeconds: number };
+  { allowed: true; remaining: number } | { allowed: false; retryAfterSeconds: number };
 
 export type RateLimitRule = {
   /** Namespaced identifier, e.g. `lookup:ip:1.2.3.4`. Hashed before storage. */

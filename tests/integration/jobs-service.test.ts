@@ -98,7 +98,9 @@ describe("createJob", () => {
 
   it("allocates tokens that are unique across jobs", async () => {
     const jobs = await Promise.all(
-      Array.from({ length: 5 }, () => createJob({ shopId: TEST_SHOP_ID, input: jobInput() }, test.db)),
+      Array.from({ length: 5 }, () =>
+        createJob({ shopId: TEST_SHOP_ID, input: jobInput() }, test.db),
+      ),
     );
     expect(new Set(jobs.map((job) => job.publicToken)).size).toBe(5);
   });
@@ -157,7 +159,10 @@ describe("updateJob", () => {
 
   it("refuses to re-open a finished job without confirmation", async () => {
     const job = await createJob({ shopId: TEST_SHOP_ID, input: jobInput() }, test.db);
-    await updateJob({ shopId: TEST_SHOP_ID, jobId: job.id, patch: { status: "DELIVERED" } }, test.db);
+    await updateJob(
+      { shopId: TEST_SHOP_ID, jobId: job.id, patch: { status: "DELIVERED" } },
+      test.db,
+    );
 
     await expect(
       updateJob({ shopId: TEST_SHOP_ID, jobId: job.id, patch: { status: "READY" } }, test.db),
@@ -179,7 +184,10 @@ describe("updateJob", () => {
   it("does not create an event when a note is saved unchanged", async () => {
     const job = await createJob({ shopId: TEST_SHOP_ID, input: jobInput() }, test.db);
 
-    await updateJob({ shopId: TEST_SHOP_ID, jobId: job.id, patch: { publicNote: "Same" } }, test.db);
+    await updateJob(
+      { shopId: TEST_SHOP_ID, jobId: job.id, patch: { publicNote: "Same" } },
+      test.db,
+    );
     const { events } = await updateJob(
       { shopId: TEST_SHOP_ID, jobId: job.id, patch: { publicNote: "Same" } },
       test.db,
@@ -192,7 +200,11 @@ describe("updateJob", () => {
     const job = await createJob({ shopId: TEST_SHOP_ID, input: jobInput() }, test.db);
 
     const { job: updated, events } = await updateJob(
-      { shopId: TEST_SHOP_ID, jobId: job.id, patch: { internalNote: "Customer ne discount maanga" } },
+      {
+        shopId: TEST_SHOP_ID,
+        jobId: job.id,
+        patch: { internalNote: "Customer ne discount maanga" },
+      },
       test.db,
     );
 
@@ -248,7 +260,10 @@ describe("updateJob", () => {
 
   it("rejects an unknown job", async () => {
     await expect(
-      updateJob({ shopId: TEST_SHOP_ID, jobId: "nonexistent00000", patch: { status: "READY" } }, test.db),
+      updateJob(
+        { shopId: TEST_SHOP_ID, jobId: "nonexistent00000", patch: { status: "READY" } },
+        test.db,
+      ),
     ).rejects.toBeInstanceOf(NotFoundError);
   });
 });
@@ -319,27 +334,41 @@ describe("listJobs search", () => {
     await createJob(
       {
         shopId: TEST_SHOP_ID,
-        input: jobInput({ customerName: "Bilal Ahmed", customerPhone: "03219876543", itemName: "Juicer" }),
+        input: jobInput({
+          customerName: "Bilal Ahmed",
+          customerPhone: "03219876543",
+          itemName: "Juicer",
+        }),
       },
       test.db,
     );
     await createJob(
       {
         shopId: TEST_SHOP_ID,
-        input: jobInput({ customerName: "Ali Raza", customerPhone: "03001234567", itemName: "Geyser" }),
+        input: jobInput({
+          customerName: "Ali Raza",
+          customerPhone: "03001234567",
+          itemName: "Geyser",
+        }),
       },
       test.db,
     );
   });
 
   it("matches the customer name case-insensitively", async () => {
-    const { items } = await listJobs({ shopId: TEST_SHOP_ID, filter: "all", query: "bilal" }, test.db);
+    const { items } = await listJobs(
+      { shopId: TEST_SHOP_ID, filter: "all", query: "bilal" },
+      test.db,
+    );
     expect(items).toHaveLength(1);
     expect(items[0]?.customerName).toBe("Bilal Ahmed");
   });
 
   it("matches the last four digits of the phone number", async () => {
-    const { items } = await listJobs({ shopId: TEST_SHOP_ID, filter: "all", query: "4567" }, test.db);
+    const { items } = await listJobs(
+      { shopId: TEST_SHOP_ID, filter: "all", query: "4567" },
+      test.db,
+    );
     expect(items).toHaveLength(1);
     expect(items[0]?.customerName).toBe("Ali Raza");
   });
@@ -354,24 +383,36 @@ describe("listJobs search", () => {
   });
 
   it("matches a local-format phone fragment", async () => {
-    const { items } = await listJobs({ shopId: TEST_SHOP_ID, filter: "all", query: "0300 1234567" }, test.db);
+    const { items } = await listJobs(
+      { shopId: TEST_SHOP_ID, filter: "all", query: "0300 1234567" },
+      test.db,
+    );
     expect(items).toHaveLength(1);
   });
 
   it("matches the item name", async () => {
-    const { items } = await listJobs({ shopId: TEST_SHOP_ID, filter: "all", query: "juicer" }, test.db);
+    const { items } = await listJobs(
+      { shopId: TEST_SHOP_ID, filter: "all", query: "juicer" },
+      test.db,
+    );
     expect(items).toHaveLength(1);
   });
 
   it("matches the job number with or without a hash", async () => {
-    const withHash = await listJobs({ shopId: TEST_SHOP_ID, filter: "all", query: "#1001" }, test.db);
+    const withHash = await listJobs(
+      { shopId: TEST_SHOP_ID, filter: "all", query: "#1001" },
+      test.db,
+    );
     const plain = await listJobs({ shopId: TEST_SHOP_ID, filter: "all", query: "1001" }, test.db);
     expect(withHash.items).toHaveLength(1);
     expect(plain.items).toHaveLength(1);
   });
 
   it("returns nothing for a query with no matches", async () => {
-    const { items } = await listJobs({ shopId: TEST_SHOP_ID, filter: "all", query: "zzzz" }, test.db);
+    const { items } = await listJobs(
+      { shopId: TEST_SHOP_ID, filter: "all", query: "zzzz" },
+      test.db,
+    );
     expect(items).toHaveLength(0);
   });
 

@@ -15,6 +15,7 @@ import { createId } from "../src/lib/ids";
 import { hashPassword, isAcceptablePassword } from "../src/lib/password";
 import { normalisePhone } from "../src/lib/phone";
 import { loadEnvFile } from "./_env";
+import { runScript } from "./_run";
 
 const seedEnvSchema = z.object({
   SEED_OWNER_EMAIL: z.string().trim().email(),
@@ -36,7 +37,9 @@ async function main(): Promise<void> {
 
   const parsed = seedEnvSchema.safeParse(process.env);
   if (!parsed.success) {
-    const details = parsed.error.issues.map((issue) => `- ${issue.path.join(".")}: ${issue.message}`);
+    const details = parsed.error.issues.map(
+      (issue) => `- ${issue.path.join(".")}: ${issue.message}`,
+    );
     throw new Error(`Seed environment is incomplete:\n${details.join("\n")}\nSee .env.example.`);
   }
 
@@ -114,7 +117,4 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
-  console.error("[seed] failed:", error instanceof Error ? error.message : error);
-  process.exitCode = 1;
-});
+runScript("seed", main);

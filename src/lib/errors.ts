@@ -17,12 +17,7 @@ export class AppError extends Error {
   readonly status: number;
   readonly details?: Record<string, string>;
 
-  constructor(
-    code: ErrorCode,
-    status: number,
-    message: string,
-    details?: Record<string, string>,
-  ) {
+  constructor(code: ErrorCode, status: number, message: string, details?: Record<string, string>) {
     super(message);
     this.name = new.target.name;
     this.code = code;
@@ -71,9 +66,19 @@ export class RateLimitError extends AppError {
 }
 
 /** Never leak internals to a caller; log the original and return a generic error. */
-export function toPublicError(error: unknown): { code: ErrorCode; status: number; message: string; details?: Record<string, string> } {
+export function toPublicError(error: unknown): {
+  code: ErrorCode;
+  status: number;
+  message: string;
+  details?: Record<string, string>;
+} {
   if (error instanceof AppError) {
-    return { code: error.code, status: error.status, message: error.message, details: error.details };
+    return {
+      code: error.code,
+      status: error.status,
+      message: error.message,
+      details: error.details,
+    };
   }
   return { code: "INTERNAL", status: 500, message: "Something went wrong" };
 }

@@ -11,6 +11,7 @@ import { join } from "node:path";
 
 import { createDbHandle } from "../src/lib/db";
 import { loadEnvFile } from "./_env";
+import { runScript } from "./_run";
 
 const MIGRATIONS_DIR = join(process.cwd(), "drizzle");
 const VERSION_PATTERN = /^[A-Za-z0-9_.-]+$/;
@@ -45,7 +46,9 @@ async function main(): Promise<void> {
 
       const sqlText = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
       // The version is a filename from this repository, validated above.
-      await handle.exec(`BEGIN;\n${sqlText}\nINSERT INTO schema_migrations (version) VALUES ('${file}');\nCOMMIT;`);
+      await handle.exec(
+        `BEGIN;\n${sqlText}\nINSERT INTO schema_migrations (version) VALUES ('${file}');\nCOMMIT;`,
+      );
       ran += 1;
       console.log(`[migrate] applied ${file}`);
     }
@@ -56,7 +59,4 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
-  console.error("[migrate] failed:", error instanceof Error ? error.message : error);
-  process.exitCode = 1;
-});
+runScript("migrate", main);

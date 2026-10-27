@@ -46,7 +46,10 @@ export function StatusSelector({
     const { target, reopen } = confirm;
     setConfirm(null);
     setMoreOpen(false);
-    await onPatch({ status: target, confirmReopen: reopen ? true : undefined }, { optimisticStatus: target });
+    await onPatch(
+      { status: target, confirmReopen: reopen ? true : undefined },
+      { optimisticStatus: target },
+    );
   }
 
   return (
@@ -92,8 +95,11 @@ export function StatusSelector({
             size="lg"
             className="h-full w-full justify-between"
             aria-expanded={moreOpen}
-            aria-haspopup="menu"
+            aria-controls="status-extra-actions"
             onClick={() => setMoreOpen((open) => !open)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setMoreOpen(false);
+            }}
             disabled={pending}
           >
             {pending ? (
@@ -106,12 +112,11 @@ export function StatusSelector({
 
           {moreOpen ? (
             <div
-              role="menu"
+              id="status-extra-actions"
               className="absolute right-0 top-full z-20 mt-1 w-56 rounded-card border border-line bg-background p-1 shadow-lg"
             >
               <button
                 type="button"
-                role="menuitem"
                 className="flex h-11 w-full items-center rounded-md px-3 text-left text-small font-medium text-danger hover:bg-danger-soft"
                 onClick={() => {
                   setConfirm({ target: "CANCELLED", reopen: isFinished });
@@ -136,7 +141,9 @@ export function StatusSelector({
           description: confirm?.reopen
             ? copy.jobDetail.reopenJobConfirmBody
             : copy.jobDetail.cancelJobConfirmBody,
-          confirmLabel: confirm?.reopen ? copy.jobDetail.reopenJobConfirm : copy.jobDetail.cancelJobConfirm,
+          confirmLabel: confirm?.reopen
+            ? copy.jobDetail.reopenJobConfirm
+            : copy.jobDetail.cancelJobConfirm,
           cancelLabel: copy.common.cancel,
         }}
         destructive={!confirm?.reopen}

@@ -64,7 +64,10 @@ export const users = pgTable(
     role: text("role").notNull().default("owner"),
     createdAt,
   },
-  (table) => [uniqueIndex("users_email_unique").on(table.email), index("users_shop_idx").on(table.shopId)],
+  (table) => [
+    uniqueIndex("users_email_unique").on(table.email),
+    index("users_shop_idx").on(table.shopId),
+  ],
 );
 
 export const jobs = pgTable(

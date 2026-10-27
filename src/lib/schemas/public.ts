@@ -14,9 +14,7 @@ export const lookupSchema = z.strictObject({
 export type LookupInput = z.infer<typeof lookupSchema>;
 
 /** `GET /api/public/jobs/:token` */
-export const publicTokenSchema = z
-  .string()
-  .regex(/^[A-Za-z0-9_-]{43}$/, "Invalid link");
+export const publicTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/, "Invalid link");
 
 /** Login payload, validated before any password work happens. */
 export const credentialsSchema = z.strictObject({

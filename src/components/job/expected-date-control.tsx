@@ -75,7 +75,11 @@ export function ExpectedDateControl({
         </div>
       </Field>
 
-      <Field id="expected-days" label={copy.jobDetail.daysStepperLabel} hint={copy.newJob.estimateDaysHint}>
+      <Field
+        id="expected-days"
+        label={copy.jobDetail.daysStepperLabel}
+        hint={copy.newJob.estimateDaysHint}
+      >
         <div className="flex flex-wrap items-center gap-2">
           <Input
             id="expected-days"
@@ -95,7 +99,11 @@ export function ExpectedDateControl({
             disabled={pending || days.trim() === ""}
             onClick={() => {
               const value = Number(days);
-              if (!Number.isInteger(value) || value < LIMITS.estimateDaysMin || value > LIMITS.estimateDaysMax) {
+              if (
+                !Number.isInteger(value) ||
+                value < LIMITS.estimateDaysMin ||
+                value > LIMITS.estimateDaysMax
+              ) {
                 return;
               }
               const nextDate = expectedDateFromDays(value, today);

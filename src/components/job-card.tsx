@@ -39,7 +39,9 @@ export function JobCard({ job, today }: { job: JobListItem; today: string }) {
         {expected
           ? `${copy.dashboard.expectedPrefix} ${expected.humanDate}`
           : `${copy.dashboard.expectedPrefix} ${copy.dashboard.expectedMissing}`}
-        {showOverdue && expected ? ` · ${copy.jobDetail.overdue(Math.abs(expected.daysAway))}` : null}
+        {showOverdue && expected
+          ? ` · ${copy.jobDetail.overdue(Math.abs(expected.daysAway))}`
+          : null}
       </p>
     </Link>
   );

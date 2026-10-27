@@ -65,7 +65,7 @@ function rememberCookies(response) {
     const index = pair.indexOf("=");
     const name = pair.slice(0, index).trim();
     const value = pair.slice(index + 1).trim();
-    if (value === "" ) jar.delete(name);
+    if (value === "") jar.delete(name);
     else jar.set(name, value);
   }
 }
@@ -123,11 +123,15 @@ async function main() {
   console.log("[e2e] starting production server…");
   // Run Next directly (not through npx) in its own process group, so the whole
   // server tree can be shut down reliably when the script ends.
-  const server = spawn(join(process.cwd(), "node_modules", ".bin", "next"), ["start", "-p", String(PORT), "-H", "127.0.0.1"], {
-    env,
-    stdio: ["ignore", "pipe", "pipe"],
-    detached: true,
-  });
+  const server = spawn(
+    join(process.cwd(), "node_modules", ".bin", "next"),
+    ["start", "-p", String(PORT), "-H", "127.0.0.1"],
+    {
+      env,
+      stdio: ["ignore", "pipe", "pipe"],
+      detached: true,
+    },
+  );
   let serverLog = "";
   server.stdout.on("data", (chunk) => (serverLog += chunk.toString()));
   server.stderr.on("data", (chunk) => (serverLog += chunk.toString()));
@@ -207,7 +211,11 @@ async function main() {
 
     const crossOrigin = await request(`/api/jobs/${job.id}`, {
       method: "PATCH",
-      headers: { "content-type": "application/json", origin: "https://evil.example", host: `localhost:${PORT}` },
+      headers: {
+        "content-type": "application/json",
+        origin: "https://evil.example",
+        host: `localhost:${PORT}`,
+      },
       body: JSON.stringify({ status: "READY" }),
     });
     assert.equal(crossOrigin.status, 400);

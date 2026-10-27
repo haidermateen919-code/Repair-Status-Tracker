@@ -53,8 +53,12 @@ describe("createJobSchema", () => {
   });
 
   it("rejects impossible calendar dates", () => {
-    expect(createJobSchema.safeParse({ ...valid, expectedReadyAt: "2026-02-31" }).success).toBe(false);
-    expect(createJobSchema.safeParse({ ...valid, expectedReadyAt: "2026-02-28" }).success).toBe(true);
+    expect(createJobSchema.safeParse({ ...valid, expectedReadyAt: "2026-02-31" }).success).toBe(
+      false,
+    );
+    expect(createJobSchema.safeParse({ ...valid, expectedReadyAt: "2026-02-28" }).success).toBe(
+      true,
+    );
   });
 });
 
@@ -81,7 +85,9 @@ describe("updateJobSchema", () => {
   });
 
   it("requires reopen confirmation to be a boolean", () => {
-    expect(updateJobSchema.safeParse({ status: "READY", confirmReopen: "yes" }).success).toBe(false);
+    expect(updateJobSchema.safeParse({ status: "READY", confirmReopen: "yes" }).success).toBe(
+      false,
+    );
   });
 
   it("bounds the estimate days on updates too", () => {

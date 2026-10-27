@@ -65,7 +65,11 @@ async function createOne(): Promise<{ id: string; token: string; jobNumber: numb
 describe("POST /api/jobs", () => {
   it("creates a job and returns 201 with the public URL", async () => {
     const response = await createPOST(jsonRequest(`${BASE}/api/jobs`, "POST", jobInput()));
-    const body = (await response.json()) as { jobNumber: number; publicUrl: string; publicToken: string };
+    const body = (await response.json()) as {
+      jobNumber: number;
+      publicUrl: string;
+      publicToken: string;
+    };
 
     expect(response.status).toBe(201);
     expect(body.jobNumber).toBe(1001);
@@ -75,9 +79,15 @@ describe("POST /api/jobs", () => {
 
   it("returns field-level details for invalid input", async () => {
     const response = await createPOST(
-      jsonRequest(`${BASE}/api/jobs`, "POST", { ...jobInput(), customerPhone: "123", itemName: "" }),
+      jsonRequest(`${BASE}/api/jobs`, "POST", {
+        ...jobInput(),
+        customerPhone: "123",
+        itemName: "",
+      }),
     );
-    const body = (await response.json()) as { error: { code: string; details: Record<string, string> } };
+    const body = (await response.json()) as {
+      error: { code: string; details: Record<string, string> };
+    };
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe("VALIDATION_FAILED");
@@ -97,7 +107,11 @@ describe("POST /api/jobs", () => {
     const response = await createPOST(
       new Request(`${BASE}/api/jobs`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", origin: "https://evil.example", host: "localhost:3000" },
+        headers: {
+          "Content-Type": "application/json",
+          origin: "https://evil.example",
+          host: "localhost:3000",
+        },
         body: JSON.stringify(jobInput()),
       }),
     );
@@ -110,7 +124,9 @@ describe("POST /api/jobs", () => {
 
     const response = await createPOST(jsonRequest(`${BASE}/api/jobs`, "POST", jobInput()));
     expect(response.status).toBe(401);
-    expect(((await response.json()) as { error: { code: string } }).error.code).toBe("UNAUTHORIZED");
+    expect(((await response.json()) as { error: { code: string } }).error.code).toBe(
+      "UNAUTHORIZED",
+    );
   });
 });
 
@@ -200,10 +216,9 @@ describe("PATCH /api/jobs/:id", () => {
 
   it("returns 409 with a machine code when re-opening without confirmation", async () => {
     const job = await createOne();
-    await PATCH(
-      jsonRequest(`${BASE}/api/jobs/${job.id}`, "PATCH", { status: "DELIVERED" }),
-      { params: params({ id: job.id }) },
-    );
+    await PATCH(jsonRequest(`${BASE}/api/jobs/${job.id}`, "PATCH", { status: "DELIVERED" }), {
+      params: params({ id: job.id }),
+    });
 
     const response = await PATCH(
       jsonRequest(`${BASE}/api/jobs/${job.id}`, "PATCH", { status: "IN_REPAIR" }),

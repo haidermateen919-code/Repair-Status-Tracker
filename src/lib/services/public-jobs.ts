@@ -100,7 +100,11 @@ export async function getPublicJobByToken(
     statusChangedAt: row.statusChangedAt,
     updatedAt: row.updatedAt,
     // Note-only events (status === null) are shown as "note updated" in the UI.
-    timeline: events.map((event) => ({ status: event.status, publicNote: event.publicNote, at: event.at })),
+    timeline: events.map((event) => ({
+      status: event.status,
+      publicNote: event.publicNote,
+      at: event.at,
+    })),
     shop: {
       name: row.shopName,
       address: row.shopAddress,

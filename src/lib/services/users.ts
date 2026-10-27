@@ -20,5 +20,8 @@ export async function updatePasswordHash(
   params: { userId: string; passwordHash: string },
   db: Database = getDb(),
 ): Promise<void> {
-  await db.update(users).set({ passwordHash: params.passwordHash }).where(eq(users.id, params.userId));
+  await db
+    .update(users)
+    .set({ passwordHash: params.passwordHash })
+    .where(eq(users.id, params.userId));
 }

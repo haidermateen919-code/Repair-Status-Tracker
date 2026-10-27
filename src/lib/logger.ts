@@ -52,6 +52,7 @@ export function logWarn(event: string, fields?: LogFields): void {
 
 export function logError(event: string, error: unknown, fields?: LogFields): void {
   const message = error instanceof Error ? error.message : String(error);
-  const stack = error instanceof Error ? error.stack?.split("\n").slice(0, 4).join(" | ") : undefined;
+  const stack =
+    error instanceof Error ? error.stack?.split("\n").slice(0, 4).join(" | ") : undefined;
   write("error", event, { ...fields, errorMessage: message, stack });
 }

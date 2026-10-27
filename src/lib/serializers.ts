@@ -22,11 +22,7 @@ export function toJobEventDto(event: JobEventRow): JobEventDto {
   };
 }
 
-export function toOwnerJob(
-  job: JobRow,
-  events: JobEventRow[],
-  baseUrl: string,
-): OwnerJobResponse {
+export function toOwnerJob(job: JobRow, events: JobEventRow[], baseUrl: string): OwnerJobResponse {
   return {
     id: job.id,
     jobNumber: job.jobNumber,

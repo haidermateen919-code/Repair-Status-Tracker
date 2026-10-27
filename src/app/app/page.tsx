@@ -49,7 +49,9 @@ export default async function DashboardPage({
     <main className="flex flex-col gap-4">
       <div>
         <h1 className="text-title text-ink">{copy.dashboard.title}</h1>
-        <p className="mt-1 text-small text-ink-muted">{copy.dashboard.counts(counts.active, counts.ready)}</p>
+        <p className="mt-1 text-small text-ink-muted">
+          {copy.dashboard.counts(counts.active, counts.ready)}
+        </p>
       </div>
 
       <SearchFilters filter={filter} query={query} counts={counts} />

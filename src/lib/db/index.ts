@@ -1,5 +1,5 @@
 import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { basename, dirname } from "node:path";
 
 import { PGlite } from "@electric-sql/pglite";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -7,6 +7,7 @@ import { drizzle as drizzleNodePg } from "drizzle-orm/node-postgres";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { Pool } from "pg";
 
+import { acquireDataDirLock } from "./lock";
 import * as schema from "./schema";
 
 /**
@@ -41,7 +42,9 @@ export const DEFAULT_PGLITE_DIR = ".data/pglite";
 
 export function createDbHandle(options: CreateDbOptions = {}): DbHandle {
   const databaseUrl =
-    options.databaseUrl === undefined ? (process.env.DATABASE_URL ?? "") : (options.databaseUrl ?? "");
+    options.databaseUrl === undefined
+      ? (process.env.DATABASE_URL ?? "")
+      : (options.databaseUrl ?? "");
 
   if (databaseUrl.trim().length > 0) {
     const pool = new Pool({
@@ -74,11 +77,17 @@ export function createDbHandle(options: CreateDbOptions = {}): DbHandle {
 
   // `PGLITE_DIR` lets tests/CI run an isolated embedded database.
   const dataDir =
-    options.dataDir === undefined ? (process.env.PGLITE_DIR?.trim() || DEFAULT_PGLITE_DIR) : options.dataDir;
+    options.dataDir === undefined
+      ? process.env.PGLITE_DIR?.trim() || DEFAULT_PGLITE_DIR
+      : options.dataDir;
   if (dataDir.length > 0) {
     // PGlite creates the leaf directory but not its parents.
     mkdirSync(dirname(dataDir), { recursive: true });
   }
+
+  // In-memory databases (tests) need no lock; on-disk ones do.
+  const releaseLock =
+    dataDir.length > 0 ? acquireDataDirLock(dataDir, basename(process.argv[1] ?? "app")) : null;
 
   const pglite = new PGlite(dataDir);
 
@@ -94,6 +103,7 @@ export function createDbHandle(options: CreateDbOptions = {}): DbHandle {
     },
     async close() {
       await pglite.close();
+      releaseLock?.();
     },
   };
 }
