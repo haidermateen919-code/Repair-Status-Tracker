@@ -1,0 +1,115 @@
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+
+import { PGlite } from "@electric-sql/pglite";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import { drizzle as drizzleNodePg } from "drizzle-orm/node-postgres";
+import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
+import { Pool } from "pg";
+
+import * as schema from "./schema";
+
+/**
+ * One database abstraction over two Postgres drivers:
+ *
+ * - `DATABASE_URL` set  → node-postgres (`pg`) against Neon/managed Postgres.
+ * - `DATABASE_URL` empty → embedded PGlite (a real Postgres in WASM) in
+ *   `.data/pglite`, which makes local development and CI zero-setup.
+ *
+ * Both expose the same Drizzle query builder and SQL dialect, so services never
+ * know which one is running.
+ */
+export type Database = PgDatabase<PgQueryResultHKT, typeof schema>;
+
+export type DbHandle = {
+  db: Database;
+  /** Runs a multi-statement SQL script (used by the migration runner). */
+  exec: (sqlText: string) => Promise<void>;
+  /** Parameterised single-statement query returning rows (scripts only). */
+  queryRows: <T>(sqlText: string, params?: unknown[]) => Promise<T[]>;
+  driver: "pglite" | "pg";
+  close: () => Promise<void>;
+};
+
+export type CreateDbOptions = {
+  databaseUrl?: string | null;
+  /** PGlite data directory. Omit for an in-memory database (tests). */
+  dataDir?: string;
+};
+
+export const DEFAULT_PGLITE_DIR = ".data/pglite";
+
+export function createDbHandle(options: CreateDbOptions = {}): DbHandle {
+  const databaseUrl =
+    options.databaseUrl === undefined ? (process.env.DATABASE_URL ?? "") : (options.databaseUrl ?? "");
+
+  if (databaseUrl.trim().length > 0) {
+    const pool = new Pool({
+      connectionString: databaseUrl,
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+    });
+
+    return {
+      db: drizzleNodePg(pool, { schema }) as unknown as Database,
+      driver: "pg",
+      async exec(sqlText: string) {
+        const client = await pool.connect();
+        try {
+          await client.query(sqlText);
+        } finally {
+          client.release();
+        }
+      },
+      async queryRows<T>(sqlText: string, params: unknown[] = []) {
+        const result = await pool.query(sqlText, params);
+        return result.rows as T[];
+      },
+      async close() {
+        await pool.end();
+      },
+    };
+  }
+
+  const dataDir = options.dataDir === undefined ? DEFAULT_PGLITE_DIR : options.dataDir;
+  if (dataDir.length > 0) {
+    // PGlite creates the leaf directory but not its parents.
+    mkdirSync(dirname(dataDir), { recursive: true });
+  }
+
+  const pglite = new PGlite(dataDir);
+
+  return {
+    db: drizzlePglite(pglite, { schema }) as unknown as Database,
+    driver: "pglite",
+    async exec(sqlText: string) {
+      await pglite.exec(sqlText);
+    },
+    async queryRows<T>(sqlText: string, params: unknown[] = []) {
+      const result = await pglite.query<T>(sqlText, params);
+      return result.rows;
+    },
+    async close() {
+      await pglite.close();
+    },
+  };
+}
+
+declare global {
+  // eslint-disable-next-line no-var -- globalThis augmentation requires `var`
+  var __repairTrackerDb: DbHandle | undefined;
+}
+
+/** Shared handle for the running server (survives dev hot reloads). */
+export function getDbHandle(): DbHandle {
+  if (!globalThis.__repairTrackerDb) {
+    globalThis.__repairTrackerDb = createDbHandle();
+  }
+  return globalThis.__repairTrackerDb;
+}
+
+/** The Drizzle client used by every service. */
+export function getDb(): Database {
+  return getDbHandle().db;
+}
