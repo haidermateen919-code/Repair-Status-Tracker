@@ -23,6 +23,10 @@ npm run setup     # creates .env with a random secret + owner password, migrates
 npm run dev       # http://localhost:3000
 ```
 
+> **Restarting after a sandbox/CI reset, or first run after cloning?** Use `npm run preview`:
+> it installs dependencies if missing, creates `.env` if missing, migrates, seeds and starts the
+> dev server in one step. `npm run dev` alone assumes the steps above already ran.
+
 `npm run setup` prints the owner email and the generated password **once** — keep it safe:
 
 ```
