@@ -25,11 +25,14 @@ const OWNER_EMAIL = "e2e-owner@shop.pk";
 const OWNER_PASSWORD = "e2e-password-12345";
 const CUSTOMER_PHONE = "03001234567";
 
-const dataDir = mkdtempSync(join(tmpdir(), "repair-e2e-"));
+// By default the run uses a throwaway embedded database. Set E2E_DATABASE_URL to
+// run the same checks against a real Postgres (CI service container, staging, …).
+const externalDatabaseUrl = process.env.E2E_DATABASE_URL?.trim() || "";
+const dataDir = externalDatabaseUrl ? "" : mkdtempSync(join(tmpdir(), "repair-e2e-"));
 const env = {
   ...process.env,
-  PGLITE_DIR: join(dataDir, "pglite"),
-  DATABASE_URL: "",
+  ...(externalDatabaseUrl ? {} : { PGLITE_DIR: join(dataDir, "pglite") }),
+  DATABASE_URL: externalDatabaseUrl,
   AUTH_SECRET: "e2e-secret-value-that-is-long-enough-1234567890",
   APP_BASE_URL: BASE,
   SEED_OWNER_EMAIL: OWNER_EMAIL,
@@ -118,6 +121,9 @@ async function waitForServer(timeoutMs = 90_000) {
 }
 
 async function main() {
+  console.log(
+    `[e2e] database: ${externalDatabaseUrl ? "external Postgres (E2E_DATABASE_URL)" : "embedded PGlite"}`,
+  );
   console.log("[e2e] building (isolated output in .next-e2e)…");
   runScript("scripts/migrate.ts");
   runScript("scripts/seed.ts");
@@ -155,7 +161,7 @@ async function main() {
     }
     server.stdout?.destroy();
     server.stderr?.destroy();
-    rmSync(dataDir, { recursive: true, force: true });
+    if (dataDir) rmSync(dataDir, { recursive: true, force: true });
   };
 
   try {

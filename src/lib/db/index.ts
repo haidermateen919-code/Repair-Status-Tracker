@@ -22,12 +22,21 @@ import * as schema from "./schema";
  */
 export type Database = PgDatabase<PgQueryResultHKT, typeof schema>;
 
+export type TransactionHandle = {
+  queryRows: <T>(sqlText: string, params?: unknown[]) => Promise<T[]>;
+};
+
 export type DbHandle = {
   db: Database;
   /** Runs a multi-statement SQL script (used by the migration runner). */
   exec: (sqlText: string) => Promise<void>;
   /** Parameterised single-statement query returning rows (scripts only). */
   queryRows: <T>(sqlText: string, params?: unknown[]) => Promise<T[]>;
+  /**
+   * Runs `fn` inside a transaction on a single connection. Required whenever a
+   * read and a write must be atomic under concurrency (e.g. the rate limiter).
+   */
+  transaction: <T>(fn: (tx: TransactionHandle) => Promise<T>) => Promise<T>;
   driver: "pglite" | "pg";
   close: () => Promise<void>;
 };
@@ -69,6 +78,23 @@ export function createDbHandle(options: CreateDbOptions = {}): DbHandle {
         const result = await pool.query(sqlText, params);
         return result.rows as T[];
       },
+      async transaction<T>(fn: (tx: TransactionHandle) => Promise<T>) {
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
+          const result = await fn({
+            queryRows: async <R>(sqlText: string, params: unknown[] = []) =>
+              (await client.query(sqlText, params)).rows as R[],
+          });
+          await client.query("COMMIT");
+          return result;
+        } catch (error) {
+          await client.query("ROLLBACK").catch(() => undefined);
+          throw error;
+        } finally {
+          client.release();
+        }
+      },
       async close() {
         await pool.end();
       },
@@ -100,6 +126,21 @@ export function createDbHandle(options: CreateDbOptions = {}): DbHandle {
     async queryRows<T>(sqlText: string, params: unknown[] = []) {
       const result = await pglite.query<T>(sqlText, params);
       return result.rows;
+    },
+    // PGlite is single-connection, so a transaction is simply BEGIN/COMMIT on it.
+    async transaction<T>(fn: (tx: TransactionHandle) => Promise<T>) {
+      await pglite.exec("BEGIN");
+      try {
+        const result = await fn({
+          queryRows: async <R>(sqlText: string, params: unknown[] = []) =>
+            (await pglite.query<R>(sqlText, params)).rows,
+        });
+        await pglite.exec("COMMIT");
+        return result;
+      } catch (error) {
+        await pglite.exec("ROLLBACK").catch(() => undefined);
+        throw error;
+      }
     },
     async close() {
       await pglite.close();

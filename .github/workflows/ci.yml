@@ -31,16 +31,53 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
 
-      - name: Unit + integration tests
+      - name: Unit + integration tests (embedded Postgres)
         run: npm test
 
       - name: Build
         run: npm run build
 
       - name: End-to-end flows (production build over HTTP)
-        env:
-          AUTH_SECRET: ci-only-secret-value-that-is-long-enough-1234567890
         run: npm run test:e2e
 
       - name: Dependency audit (no high/critical)
         run: npm audit --audit-level=high
+
+  postgres:
+    name: Integration tests on real PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: integration_check
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      AUTH_SECRET: ci-only-secret-value-that-is-long-enough-1234567890
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/integration_check
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Integration tests (pg driver, real concurrency)
+        run: npx vitest run --config vitest.pg.config.mts
+
+      - name: End-to-end flows on real PostgreSQL
+        run: npm run test:e2e

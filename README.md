@@ -175,6 +175,18 @@ npm test          # 224 tests: pure logic, services, rate limiter, HTTP contract
 npm run test:e2e  # builds, seeds a throwaway database, drives both PRD journeys over HTTP
 ```
 
+Both suites can also run against a **real PostgreSQL** (the production driver), which is how the
+concurrency-sensitive paths are verified:
+
+```bash
+DATABASE_URL='postgresql://user:pass@host/db' npm run db:migrate
+DATABASE_URL='postgresql://user:pass@host/db' npx vitest run --config vitest.pg.config.mts
+E2E_DATABASE_URL='postgresql://user:pass@host/db2' npm run test:e2e
+```
+
+CI runs both: the fast embedded suite, plus a `postgres:18` service job that exercises the `pg` driver
+and real concurrent writes (job numbering and rate-limit admission are asserted to be exact).
+
 The end-to-end script (`scripts/e2e.mjs`) proves the product promise end to end: the owner logs in,
 creates a job, sets it **Ready**, and the _same_ customer URL now shows Ready; the customer finds the
 job by phone; a deleted job's link dies; a wrong password and a logged-out session are rejected;

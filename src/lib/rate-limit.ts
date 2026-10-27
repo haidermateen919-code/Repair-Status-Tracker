@@ -1,12 +1,18 @@
 import { createHash } from "node:crypto";
 
-import { getDbHandle } from "./db";
+import { getDbHandle, type TransactionHandle } from "./db";
 import { logWarn } from "./logger";
 
 /**
  * Sliding-window rate limiter backed by Postgres (PRD §6.2 explicitly allows
  * this instead of Upstash). Each bucket stores only a hash of the identifier,
  * so neither IP addresses nor phone numbers are kept in plain text.
+ *
+ * Correctness under concurrency: "count, then insert" is a classic race — many
+ * requests can read the same pre-insert count and all be admitted (observed:
+ * 18 admissions for a limit of 10 on real Postgres). The check and the write
+ * therefore run in one transaction holding a per-bucket advisory lock, which
+ * serialises concurrent attempts on the same bucket and nothing else.
  */
 
 export type RateLimitResult =
@@ -33,34 +39,48 @@ export async function consumeRateLimit(rule: RateLimitRule): Promise<RateLimitRe
   const { key, limit, windowSeconds } = rule;
   const handle = getDbHandle();
 
-  const inserted = await handle.queryRows<{ id: number }>(
-    `insert into rate_limit_events (bucket)
-     select $1
-     where (
-       select count(*) from rate_limit_events
-       where bucket = $1 and created_at > now() - make_interval(secs => $2)
-     ) < $3
-     returning id`,
-    [key, windowSeconds, limit],
-  );
+  const result = await handle.transaction<RateLimitResult>(async (tx) => {
+    // Serialise only attempts that share this bucket (same IP or same number).
+    await tx.queryRows("select pg_advisory_xact_lock(hashtext($1)::bigint)", [key]);
 
-  if (inserted.length > 0) {
+    const inserted = await tx.queryRows<{ id: number }>(
+      `insert into rate_limit_events (bucket)
+       select $1
+       where (
+         select count(*) from rate_limit_events
+         where bucket = $1 and created_at > now() - make_interval(secs => $2)
+       ) < $3
+       returning id`,
+      [key, windowSeconds, limit],
+    );
+
+    if (inserted.length > 0) {
+      return { allowed: true, remaining: Math.max(0, limit - 1) };
+    }
+
+    const [oldest] = await tx.queryRows<{ retry_after: string }>(
+      `select ceil(extract(epoch from (min(created_at) + make_interval(secs => $2) - now())))::text as retry_after
+       from rate_limit_events
+       where bucket = $1 and created_at > now() - make_interval(secs => $2)`,
+      [key, windowSeconds],
+    );
+
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Number(oldest?.retry_after ?? windowSeconds)),
+    };
+  });
+
+  if (!result.allowed) {
+    logWarn("rate_limit.blocked", {
+      bucket: key.split(":")[0],
+      retryAfterSeconds: result.retryAfterSeconds,
+    });
+  } else {
     void pruneOldEvents();
-    return { allowed: true, remaining: Math.max(0, limit - 1) };
   }
 
-  const [oldest] = await handle.queryRows<{ retry_after: string }>(
-    `select ceil(extract(epoch from (min(created_at) + make_interval(secs => $2) - now())))::text as retry_after
-     from rate_limit_events
-     where bucket = $1 and created_at > now() - make_interval(secs => $2)`,
-    [key, windowSeconds],
-  );
-
-  const retryAfterSeconds = Math.max(1, Number(oldest?.retry_after ?? windowSeconds));
-
-  logWarn("rate_limit.blocked", { bucket: key.split(":")[0], retryAfterSeconds });
-
-  return { allowed: false, retryAfterSeconds };
+  return result;
 }
 
 /** Checks the window without recording an attempt (used before password checks). */
@@ -75,10 +95,16 @@ export async function isRateLimited(rule: RateLimitRule): Promise<boolean> {
   return Number(row?.count ?? 0) >= rule.limit;
 }
 
-/** Records one attempt, e.g. a failed login. */
+/**
+ * Records one attempt (e.g. a failed login). Advisory-locked so a burst of
+ * concurrent failures still produces an exact count.
+ */
 export async function recordRateLimitEvent(key: string): Promise<void> {
   const handle = getDbHandle();
-  await handle.queryRows(`insert into rate_limit_events (bucket) values ($1)`, [key]);
+  await handle.transaction(async (tx: TransactionHandle) => {
+    await tx.queryRows("select pg_advisory_xact_lock(hashtext($1)::bigint)", [key]);
+    await tx.queryRows(`insert into rate_limit_events (bucket) values ($1)`, [key]);
+  });
   void pruneOldEvents();
 }
 

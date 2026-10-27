@@ -84,6 +84,30 @@ describe("consumeRateLimit", () => {
     expect((await consumeRateLimit(rule)).allowed).toBe(true);
   });
 
+  it("admits exactly the limit under a concurrent burst (no read/write race)", async () => {
+    // Regression test: a naive count-then-insert admitted 18 of 20 requests for
+    // a limit of 10 on real Postgres, because every request read the same
+    // pre-insert count. The limiter now holds a per-bucket advisory lock.
+    const burst = { key: bucketKey("burst", "1.2.3.4"), limit: 10, windowSeconds: 60 };
+
+    const results = await Promise.all(Array.from({ length: 40 }, () => consumeRateLimit(burst)));
+
+    const admitted = results.filter((result) => result.allowed).length;
+    expect(admitted).toBe(10);
+  });
+
+  it("serialises concurrent failures in the same bucket", async () => {
+    const key = bucketKey("login-burst", "5.5.5.5");
+
+    await Promise.all(Array.from({ length: 12 }, () => recordRateLimitEvent(key)));
+
+    const [row] = await test.handle.queryRows<{ count: string }>(
+      "select count(*)::text as count from rate_limit_events where bucket = $1",
+      [key],
+    );
+    expect(row?.count).toBe("12");
+  });
+
   it("does not record blocked attempts, so the window cannot be extended forever", async () => {
     for (let index = 0; index < rule.limit; index += 1) {
       await consumeRateLimit(rule);

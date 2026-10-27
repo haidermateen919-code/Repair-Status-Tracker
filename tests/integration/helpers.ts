@@ -31,7 +31,15 @@ function loadMigration(): string {
 }
 
 export async function createTestDatabase(): Promise<TestDatabase> {
-  const handle = createDbHandle({ databaseUrl: null, dataDir: "" });
+  // With DATABASE_URL set (vitest.pg.config.mts) the suite runs against a real
+  // PostgreSQL; otherwise it uses an in-memory embedded database.
+  const externalUrl = process.env.DATABASE_URL?.trim() || null;
+  const handle = createDbHandle({ databaseUrl: externalUrl, dataDir: "" });
+  // Start from a clean schema so the suite is repeatable on a real server too.
+  await handle.exec(`
+    DROP TABLE IF EXISTS job_events, jobs, rate_limit_events, users, shops, schema_migrations CASCADE;
+    DROP TYPE IF EXISTS job_status CASCADE;
+  `);
   await handle.exec(loadMigration());
 
   // Services that are not given a handle explicitly use the app-wide one.
