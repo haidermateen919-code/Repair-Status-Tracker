@@ -57,7 +57,9 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2" noValidate>
+    // `method="post"` guarantees that even a pre-hydration (or JS-disabled)
+    // submit posts instead of appending the password to the URL.
+    <form method="post" onSubmit={handleSubmit} className="flex flex-col gap-2" noValidate>
       <Field id="email" label={copy.auth.emailLabel}>
         <Input
           id="email"

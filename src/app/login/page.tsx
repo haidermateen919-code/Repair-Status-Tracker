@@ -20,10 +20,15 @@ function safeNextPath(value: string | undefined): string {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; email?: string; password?: string }>;
 }) {
   const session = await getOwnerSession();
   const params = await searchParams;
+
+  // Defence in depth: if a pre-hydration submit ever put credentials in the
+  // query string, strip them from the URL (and from browser history) at once.
+  if (params.email !== undefined || params.password !== undefined) redirect("/login");
+
   const nextPath = safeNextPath(params.next);
 
   if (session) redirect(nextPath);

@@ -75,7 +75,7 @@ export function TrackForm({ shopWhatsappPhone }: { shopWhatsappPhone: string | n
 
   return (
     <div className="flex flex-col gap-5">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2" noValidate>
+      <form method="post" onSubmit={handleSubmit} className="flex flex-col gap-2" noValidate>
         <Field id="lookup-phone" label={copy.track.phoneLabel} error={fieldError ?? undefined}>
           <Input
             id="lookup-phone"

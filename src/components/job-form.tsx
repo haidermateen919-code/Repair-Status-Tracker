@@ -149,7 +149,7 @@ export function JobForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2" noValidate>
+    <form method="post" onSubmit={handleSubmit} className="flex flex-col gap-2" noValidate>
       <Field id={nameId} label={copy.newJob.customerNameLabel} error={errors.customerName}>
         <Input
           id={nameId}

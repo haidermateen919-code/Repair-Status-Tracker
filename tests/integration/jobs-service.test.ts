@@ -318,6 +318,27 @@ describe("listJobs", () => {
     expect(numbers).toEqual([...numbers].sort((a, b) => b - a));
   });
 
+  it("sorts ready jobs oldest-ready first, because they are waiting to be collected", async () => {
+    const ready = await listJobs({ shopId: TEST_SHOP_ID, filter: "ready" }, test.db);
+    const first = ready.items[0];
+    expect(first).toBeDefined();
+
+    // Make the ready job look like it has been waiting for three days.
+    await test.handle.queryRows(
+      `UPDATE jobs SET status_changed_at = now() - interval '3 days' WHERE id = $1`,
+      [first!.id],
+    );
+
+    const job = await createJob(
+      { shopId: TEST_SHOP_ID, input: jobInput({ customerName: "Just Ready" }) },
+      test.db,
+    );
+    await updateJob({ shopId: TEST_SHOP_ID, jobId: job.id, patch: { status: "READY" } }, test.db);
+
+    const sorted = await listJobs({ shopId: TEST_SHOP_ID, filter: "ready" }, test.db);
+    expect(sorted.items.map((item) => item.jobNumber)).toEqual([first!.jobNumber, job.jobNumber]);
+  });
+
   it("never returns another shop's jobs", async () => {
     const { items } = await listJobs({ shopId: TEST_SHOP_ID_2, filter: "all" }, test.db);
     expect(items).toHaveLength(0);
