@@ -61,15 +61,14 @@ export function SearchFilters({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label={copy.dashboard.title}>
+      <nav className="flex flex-wrap gap-2" aria-label={copy.dashboard.title}>
         {TABS.map((tab) => {
           const active = tab.id === filter;
           return (
             <Link
               key={tab.id}
               href={tabHref(tab.id)}
-              role="tab"
-              aria-selected={active}
+              aria-current={active ? "page" : undefined}
               scroll={false}
               className={cn(
                 "inline-flex h-11 items-center gap-1.5 rounded-full border px-4 text-small font-medium transition-colors",
@@ -87,7 +86,7 @@ export function SearchFilters({
             </Link>
           );
         })}
-      </div>
+      </nav>
 
       <div className="relative">
         <Search

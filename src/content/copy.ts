@@ -126,7 +126,6 @@ export const copy = {
     expectedPrefix: "expected:",
     expectedMissing: "—",
     share: "WhatsApp",
-    openJob: (jobNumber: number) => `Job #${jobNumber} kholein`,
   },
 
   newJob: {

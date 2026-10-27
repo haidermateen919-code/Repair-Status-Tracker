@@ -10,11 +10,13 @@ import { SharePanel, type ShareShopInfo } from "@/components/job/share-panel";
 import { StatusSelector } from "@/components/job/status-selector";
 import { StatusChip } from "@/components/status-chip";
 import { Timeline } from "@/components/timeline";
+import { WhatsappShareButton } from "@/components/whatsapp-share-button";
 import { Card, CardBody } from "@/components/ui/card";
 import { copy } from "@/content/copy";
 import { useJobUpdate } from "@/hooks/use-job-update";
 import { formatLongDate } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
+import { buildShareMessages } from "@/lib/share";
 import { telUrl } from "@/lib/urls";
 import { buildTimelineItems } from "@/lib/timeline";
 import type { OwnerJobResponse } from "@/types/contracts";
@@ -36,6 +38,7 @@ export function JobDetailPanel({
   justCreated: boolean;
 }) {
   const { job, patch, pending } = useJobUpdate(initialJob);
+  const { newJobMessage } = buildShareMessages(job, shop);
 
   const timelineItems = buildTimelineItems(
     job.events.map((event) => ({
@@ -126,6 +129,16 @@ export function JobDetailPanel({
       </Card>
 
       <DeleteJob job={job} />
+
+      {/* Primary action stays thumb-reachable on a phone (PRD F4, §5.1). */}
+      <div className="fixed inset-x-0 bottom-0 border-t border-line bg-background p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
+        <WhatsappShareButton
+          phone={job.customerPhone}
+          message={newJobMessage}
+          label={copy.jobDetail.shareWhatsApp}
+          className="w-full"
+        />
+      </div>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import { hash, verify } from "@node-rs/argon2";
 
 /**
@@ -10,9 +12,16 @@ const ARGON2_OPTIONS = {
   parallelism: 1,
 } as const;
 
-/** A pre-computed hash of a random string, used to keep failed-login timing flat. */
-const DUMMY_HASH =
-  "$argon2id$v=19$m=19456,t=2,p=1$c29tZXJhbmRvbXNhbHQ$Z9h3S1yC0jVJ2m3G0d5AvXr0cQ1cJ7g2mF8pQb1Y3Zk";
+/**
+ * Hash of a random throwaway string, computed once per process and used to keep
+ * the time taken by "unknown email" indistinguishable from "wrong password".
+ */
+let dummyHashPromise: Promise<string> | null = null;
+
+function getDummyHash(): Promise<string> {
+  dummyHashPromise ??= hash(randomBytes(32).toString("base64url"), ARGON2_OPTIONS);
+  return dummyHashPromise;
+}
 
 export async function hashPassword(plain: string): Promise<string> {
   return hash(plain, ARGON2_OPTIONS);
@@ -33,7 +42,7 @@ export async function verifyPassword(passwordHash: string, plain: string): Promi
  */
 export async function simulatePasswordCheck(plain: string): Promise<void> {
   try {
-    await verify(DUMMY_HASH, plain);
+    await verify(await getDummyHash(), plain);
   } catch {
     // The dummy hash is only a timing decoy; failures are expected and ignored.
   }

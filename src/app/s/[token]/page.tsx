@@ -10,7 +10,12 @@ import { WhatsappShareButton } from "@/components/whatsapp-share-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { copy } from "@/content/copy";
-import { describeExpectedReady, formatLongDate, todayInShopTimezone } from "@/lib/dates";
+import {
+  describeExpectedReady,
+  formatLongDate,
+  formatTime,
+  todayInShopTimezone,
+} from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { publicTokenSchema } from "@/lib/schemas/public";
 import { getPublicJobByToken } from "@/lib/services/public-jobs";
@@ -112,7 +117,9 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ t
             </dd>
           </dl>
           <p className="text-small text-ink-muted">
-            {copy.publicStatus.updatedAt(formatLongDate(job.updatedAt))}
+            {copy.publicStatus.updatedAt(
+              `${formatLongDate(job.updatedAt)} · ${formatTime(job.updatedAt)}`,
+            )}
           </p>
         </CardBody>
       </Card>

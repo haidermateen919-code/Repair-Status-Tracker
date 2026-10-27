@@ -19,7 +19,6 @@ export function JobCard({ job, today }: { job: JobListItem; today: string }) {
     <Link
       href={`/app/jobs/${job.id}`}
       className="block rounded-card border border-line bg-background p-4 transition-colors hover:border-accent focus-visible:border-accent"
-      aria-label={copy.dashboard.openJob(job.jobNumber)}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

@@ -28,6 +28,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Isolated build output for the end-to-end run, so it never collides with a
+  // running `next dev` (both would otherwise write to `.next`).
+  distDir: process.env.NEXT_DIST_DIR?.trim() || ".next",
   poweredByHeader: false,
   // Native / WASM packages must not be bundled by webpack.
   serverExternalPackages: ["@electric-sql/pglite", "@node-rs/argon2", "pg"],

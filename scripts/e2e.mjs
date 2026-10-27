@@ -19,7 +19,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const PORT = Number(process.env.E2E_PORT ?? 3210);
-const BASE = `http://localhost:${PORT}`;
+// 127.0.0.1 (not "localhost"): avoids IPv6/IPv4 resolution surprises in CI.
+const BASE = `http://127.0.0.1:${PORT}`;
 const OWNER_EMAIL = "e2e-owner@shop.pk";
 const OWNER_PASSWORD = "e2e-password-12345";
 const CUSTOMER_PHONE = "03001234567";
@@ -40,6 +41,7 @@ const env = {
   SHOP_ADDRESS: "Test Bazaar",
   SHOP_TIMINGS: "9am-8pm",
   NODE_ENV: "production",
+  NEXT_DIST_DIR: ".next-e2e",
 };
 
 let passed = 0;
@@ -81,7 +83,7 @@ async function request(path, init = {}, { withCookies = true } = {}) {
   return response;
 }
 
-const originHeader = { origin: BASE, host: `localhost:${PORT}` };
+const originHeader = { origin: BASE, host: `127.0.0.1:${PORT}` };
 
 async function login(password) {
   const csrfResponse = await request("/api/auth/csrf", {}, { withCookies: false });
@@ -116,16 +118,25 @@ async function waitForServer(timeoutMs = 90_000) {
 }
 
 async function main() {
-  console.log("[e2e] migrating and seeding the e2e database…");
+  console.log("[e2e] building (isolated output in .next-e2e)…");
   runScript("scripts/migrate.ts");
   runScript("scripts/seed.ts");
+  const build = spawnSync(join(process.cwd(), "node_modules", ".bin", "next"), ["build"], {
+    env,
+    encoding: "utf8",
+  });
+  if (build.status !== 0) {
+    console.error(build.stdout ?? "");
+    console.error(build.stderr ?? "");
+    throw new Error("next build failed");
+  }
 
   console.log("[e2e] starting production server…");
   // Run Next directly (not through npx) in its own process group, so the whole
   // server tree can be shut down reliably when the script ends.
   const server = spawn(
     join(process.cwd(), "node_modules", ".bin", "next"),
-    ["start", "-p", String(PORT), "-H", "127.0.0.1"],
+    ["start", "-p", String(PORT)],
     {
       env,
       stdio: ["ignore", "pipe", "pipe"],

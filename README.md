@@ -23,11 +23,11 @@ npm run setup     # creates .env with a random secret + owner password, migrates
 npm run dev       # http://localhost:3000
 ```
 
-`npm run setup` prints the owner email and the generated password **once**:
+`npm run setup` prints the owner email and the generated password **once** — keep it safe:
 
 ```
   Owner login:  owner@shop.pk
-  Password:     0yq6dpWmMgvSlJUG
+  Password:     <generated password>
 ```
 
 Sign in at <http://localhost:3000/login>. Edit the `SHOP_*` values in `.env` to the real shop's

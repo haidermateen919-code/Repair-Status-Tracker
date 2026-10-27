@@ -110,3 +110,39 @@ describe("telUrl", () => {
     expect(telUrl("0300 1234567")).toBe("tel:03001234567");
   });
 });
+
+describe("buildShareMessages", () => {
+  it("produces both messages from a single source", async () => {
+    const { buildShareMessages } = await import("@/lib/share");
+    const messages = buildShareMessages(
+      {
+        customerName: "Ali Raza",
+        itemName: "Geyser",
+        jobNumber: 1042,
+        publicUrl: "https://tracker.pk/s/abc",
+        status: "READY",
+      },
+      { name: "Al-Madina", phone: "0300 1234567" },
+    );
+
+    expect(messages.newJobMessage).toContain("https://tracker.pk/s/abc");
+    expect(messages.updateMessage).toContain("status update: Ready");
+    expect(messages.updateMessage).toContain("https://tracker.pk/s/abc");
+  });
+
+  it("uses the same link in both messages, never a per-update link", async () => {
+    const { buildShareMessages } = await import("@/lib/share");
+    const messages = buildShareMessages(
+      {
+        customerName: "Ali",
+        itemName: "Fan",
+        jobNumber: 7,
+        publicUrl: "https://x.pk/s/same",
+        status: "DELIVERED",
+      },
+      { name: "Shop", phone: "0300" },
+    );
+
+    expect(messages.updateMessage.split("https://x.pk/s/same").length).toBe(2);
+  });
+});

@@ -1,6 +1,7 @@
 import { CopyLinkButton } from "@/components/copy-link-button";
 import { WhatsappShareButton } from "@/components/whatsapp-share-button";
 import { copy } from "@/content/copy";
+import { buildShareMessages } from "@/lib/share";
 import type { OwnerJobResponse } from "@/types/contracts";
 
 export type ShareShopInfo = { name: string; phone: string };
@@ -10,22 +11,7 @@ export type ShareShopInfo = { name: string; phone: string };
  * never changes when the status changes — that is the whole product promise.
  */
 export function SharePanel({ job, shop }: { job: OwnerJobResponse; shop: ShareShopInfo }) {
-  const newJobMessage = copy.whatsapp.newJobMessage({
-    customerName: job.customerName,
-    itemName: job.itemName,
-    jobNumber: job.jobNumber,
-    publicUrl: job.publicUrl,
-    shopName: shop.name,
-    shopPhone: shop.phone,
-  });
-
-  const updateMessage = copy.whatsapp.updateMessage({
-    customerName: job.customerName,
-    itemName: job.itemName,
-    jobNumber: job.jobNumber,
-    statusLabel: copy.status[job.status].label,
-    publicUrl: job.publicUrl,
-  });
+  const { newJobMessage, updateMessage } = buildShareMessages(job, shop);
 
   return (
     <section aria-labelledby="share-heading" className="flex flex-col gap-3">
