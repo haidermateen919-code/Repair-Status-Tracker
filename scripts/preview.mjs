@@ -5,7 +5,8 @@
  *   1. install dependencies if node_modules is missing
  *   2. create .env if it is missing
  *   3. apply migrations and seed (both idempotent)
- *   4. start the dev server
+ *   4. add demo jobs when the board is empty (skipped once anything exists)
+ *   5. start the dev server
  *
  * Useful in ephemeral/sandbox environments where the workspace is rebuilt
  * between sessions, and for anyone cloning the repo for the first time.
@@ -38,6 +39,7 @@ if (!existsSync(join(root, ".env"))) {
 
 run(bin("tsx"), ["scripts/migrate.ts"], "applying database migrations");
 run(bin("tsx"), ["scripts/seed.ts"], "seeding the shop and owner account");
+run(bin("tsx"), ["scripts/demo.ts"], "adding demo jobs (only when the board is empty)");
 
 console.log("\n[preview] starting the dev server on http://localhost:3000\n");
 const dev = spawn(bin("next"), ["dev"], { stdio: "inherit", env: process.env });

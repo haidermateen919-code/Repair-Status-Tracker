@@ -16,6 +16,7 @@
     "test:e2e": "node scripts/e2e.mjs",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "demo:seed": "tsx scripts/demo.ts",
     "db:purge": "tsx scripts/purge-old-data.ts",
     "db:reset-password": "tsx scripts/reset-password.ts",
     "setup": "node scripts/setup-env.mjs && npm run db:migrate && npm run db:seed",

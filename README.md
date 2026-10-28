@@ -52,6 +52,7 @@ name, phone and address, then run `npm run db:seed` again to update the seeded s
 | `npm run test:e2e`                            | 18 end-to-end checks against a production build over HTTP    |
 | `npm run db:migrate`                          | Apply new files in `drizzle/` exactly once each              |
 | `npm run db:seed`                             | Create/update the shop + owner (idempotent)                  |
+| `npm run demo:seed`                           | Add four demo jobs when the board is empty (idempotent)      |
 | `npm run db:reset-password`                   | Reset the owner password (`--generate`, or `--password '…'`) |
 | `npm run db:purge`                            | Retention cleanup (`--dry-run` to preview)                   |
 | `npm run icons`                               | Re-render PWA icons from the SVG source                      |

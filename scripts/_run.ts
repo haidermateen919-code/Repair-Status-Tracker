@@ -12,6 +12,9 @@ export function runScript(name: string, main: () => Promise<void>): void {
     } else {
       console.error(`[${name}] failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-    process.exitCode = 1;
+    // The database handle keeps the event loop alive (and, for PGlite, the data
+    // directory locked), so an unhandled rejection would otherwise hang CI,
+    // `npm run` and the sandbox until it times out. Exit explicitly.
+    process.exit(1);
   });
 }
