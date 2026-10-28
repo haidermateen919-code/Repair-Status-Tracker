@@ -1,8 +1,8 @@
 name: Deploy
 
 # Runs where there is unrestricted internet access (GitHub runners).
-# `push` on the session branch lets an agent deploy without merging to main;
-# `workflow_dispatch` is there for manual re-deploys.
+# Every push to main that touches application code provisions the database and
+# ships to production; `workflow_dispatch` re-deploys on demand.
 on:
   workflow_dispatch:
     inputs:
@@ -13,7 +13,6 @@ on:
   push:
     branches:
       - main
-      - arena/4d80e5e2-repair-status-tracker
     paths:
       - "src/**"
       - "public/**"
@@ -48,6 +47,7 @@ jobs:
       SHOP_ADDRESS: ${{ secrets.SHOP_ADDRESS }}
       SHOP_TIMINGS: ${{ secrets.SHOP_TIMINGS }}
       VERCEL_PROJECT_NAME: repair-status-tracker
+      APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
 
     steps:
       - uses: actions/checkout@v4
@@ -85,11 +85,21 @@ jobs:
 
       - name: Sync runtime environment variables
         run: |
-          printf '%s' "$DATABASE_URL" | vercel env add DATABASE_URL production --force --token "$VERCEL_TOKEN"
-          printf '%s' "$AUTH_SECRET"  | vercel env add AUTH_SECRET production --force --token "$VERCEL_TOKEN"
-          if [ -n "$APP_BASE_URL" ]; then
-            printf '%s' "$APP_BASE_URL" | vercel env add APP_BASE_URL production --force --token "$VERCEL_TOKEN"
-          fi
+          # `add` refuses to overwrite, so remove first. Both are no-ops on a
+          # fresh project; failures here are not fatal.
+          set_env() {
+            name="$1"; value="$2"
+            [ -z "$value" ] && return 0
+            vercel env rm "$name" production --yes --token "$VERCEL_TOKEN" >/dev/null 2>&1 || true
+            printf '%s' "$value" | vercel env add "$name" production --token "$VERCEL_TOKEN" >/dev/null
+            echo "synced $name"
+          }
+
+          set_env DATABASE_URL "$DATABASE_URL"
+          set_env AUTH_SECRET "$AUTH_SECRET"
+          # Optional: only needed for a custom domain, otherwise links are
+          # derived from the request's forwarded headers.
+          set_env APP_BASE_URL "$APP_BASE_URL"
 
       - name: Build
         run: vercel pull --yes --environment=production --token "$VERCEL_TOKEN" && vercel build --prod --token "$VERCEL_TOKEN"

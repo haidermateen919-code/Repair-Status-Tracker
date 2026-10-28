@@ -208,3 +208,7 @@ browser binaries are available). Loading, error and offline states are verified 
   matters.
 - **WhatsApp is a deep link.** Nothing is sent automatically and there are no message costs, by design.
 - **No browser-based E2E yet** (see §6) and no Sentry integration; both are additive.
+
+## Deployment
+
+See [DEPLOY.md](DEPLOY.md) for the production pipeline (GitHub Actions → provision → Vercel) and the three secrets it needs.
