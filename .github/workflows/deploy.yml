@@ -1,0 +1,122 @@
+name: Deploy
+
+# Runs where there is unrestricted internet access (GitHub runners).
+# `push` on the session branch lets an agent deploy without merging to main;
+# `workflow_dispatch` is there for manual re-deploys.
+on:
+  workflow_dispatch:
+    inputs:
+      provision:
+        description: "Also apply migrations and seed the shop/owner"
+        type: boolean
+        default: true
+  push:
+    branches:
+      - main
+      - arena/4d80e5e2-repair-status-tracker
+    paths:
+      - "src/**"
+      - "public/**"
+      - "drizzle/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "next.config.ts"
+      - "tailwind.config.ts"
+      - ".github/workflows/deploy.yml"
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Provision database and deploy to Vercel
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      SEED_OWNER_EMAIL: ${{ secrets.SEED_OWNER_EMAIL }}
+      SEED_OWNER_PASSWORD: ${{ secrets.SEED_OWNER_PASSWORD }}
+      SEED_OWNER_NAME: ${{ secrets.SEED_OWNER_NAME }}
+      SHOP_NAME: ${{ secrets.SHOP_NAME }}
+      SHOP_PHONE: ${{ secrets.SHOP_PHONE }}
+      SHOP_WHATSAPP: ${{ secrets.SHOP_WHATSAPP }}
+      SHOP_ADDRESS: ${{ secrets.SHOP_ADDRESS }}
+      SHOP_TIMINGS: ${{ secrets.SHOP_TIMINGS }}
+      VERCEL_PROJECT_NAME: repair-status-tracker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Fail fast on missing configuration
+        run: |
+          missing=0
+          for key in DATABASE_URL AUTH_SECRET VERCEL_TOKEN SEED_OWNER_EMAIL SEED_OWNER_PASSWORD SHOP_NAME SHOP_PHONE SHOP_WHATSAPP; do
+            if [ -z "${!key}" ]; then echo "::error::Missing repository secret: $key"; missing=1; fi
+          done
+          exit $missing
+
+      - name: Quality gate
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test
+
+      - name: Apply migrations and seed
+        if: ${{ github.event_name == 'push' || inputs.provision }}
+        run: npm run provision
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Link project
+        run: vercel link --yes --project "$VERCEL_PROJECT_NAME" --token "$VERCEL_TOKEN"
+
+      - name: Sync runtime environment variables
+        run: |
+          printf '%s' "$DATABASE_URL" | vercel env add DATABASE_URL production --force --token "$VERCEL_TOKEN"
+          printf '%s' "$AUTH_SECRET"  | vercel env add AUTH_SECRET production --force --token "$VERCEL_TOKEN"
+          if [ -n "$APP_BASE_URL" ]; then
+            printf '%s' "$APP_BASE_URL" | vercel env add APP_BASE_URL production --force --token "$VERCEL_TOKEN"
+          fi
+
+      - name: Build
+        run: vercel pull --yes --environment=production --token "$VERCEL_TOKEN" && vercel build --prod --token "$VERCEL_TOKEN"
+
+      - name: Deploy to production
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Deployed"
+            echo ""
+            echo "- URL: $url"
+            echo "- Health: $url/login"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Smoke test the live deployment
+        run: |
+          url="${{ steps.deploy.outputs.url }}"
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$url/login" || true)
+            echo "attempt $attempt: /login -> $code"
+            [ "$code" = "200" ] && break
+            sleep 10
+          done
+          test "$code" = "200" || { echo "::error::Deployment did not serve /login"; exit 1; }
+          # Public pages must stay out of search engines.
+          curl -s -D - -o /dev/null "$url/track" | grep -qi 'x-robots-tag: noindex' \
+            || { echo "::error::/track is missing X-Robots-Tag: noindex"; exit 1; }
+          echo "OK: $url"

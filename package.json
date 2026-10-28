@@ -20,7 +20,8 @@
     "db:reset-password": "tsx scripts/reset-password.ts",
     "setup": "node scripts/setup-env.mjs && npm run db:migrate && npm run db:seed",
     "icons": "node scripts/generate-icons.mjs",
-    "preview": "node scripts/preview.mjs"
+    "preview": "node scripts/preview.mjs",
+    "provision": "tsx scripts/provision.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.12",
