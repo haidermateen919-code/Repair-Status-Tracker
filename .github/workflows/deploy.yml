@@ -88,9 +88,11 @@ jobs:
 
       - name: Create or link the Vercel project
         run: |
-          # `project create` fails harmlessly when the project already exists.
-          vercel project create "$VERCEL_PROJECT_NAME" --token "$VERCEL_TOKEN" >/dev/null 2>&1 || true
-          vercel link --yes --project "$VERCEL_PROJECT_NAME" --token "$VERCEL_TOKEN"
+          # Link when the project already exists, otherwise create it first.
+          if ! vercel link --yes --project "$VERCEL_PROJECT_NAME" --token "$VERCEL_TOKEN"; then
+            vercel project create "$VERCEL_PROJECT_NAME" --token "$VERCEL_TOKEN"
+            vercel link --yes --project "$VERCEL_PROJECT_NAME" --token "$VERCEL_TOKEN"
+          fi
 
       - name: Sync runtime environment variables
         run: |
