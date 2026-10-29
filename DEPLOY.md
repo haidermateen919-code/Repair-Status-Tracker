@@ -1,73 +1,96 @@
 # Going live
 
-This file records how the app reaches production, and what is already automated.
-Everything here is driven by `.github/workflows/deploy.yml`; nothing is done by hand
-except creating the two accounts and pasting three values into GitHub.
+Production runs on Vercel, with the database provisioned by GitHub Actions.
+Everything is automated by `.github/workflows/deploy.yml`; the only manual part
+is creating the two accounts and pasting **two** secrets into GitHub.
+
+## One-time setup (about five minutes)
+
+### 1. Create a Postgres database
+
+Any managed Postgres works — Neon (free tier is plenty), Supabase, Railway, RDS.
+Create the project and copy the **pooled** connection string. It looks like:
+
+```
+postgresql://user:password@ep-cool-name-123456.eu-central-1.aws.neon.tech/neondb?sslmode=require
+```
+
+Nothing needs to be run against it by hand: the pipeline applies migrations and
+seeds the shop on its first run.
+
+### 2. Create a Vercel token
+
+<https://vercel.com/account/tokens> → **Create Token** → scope _Full Account_,
+expiry "No expiration". Copy it once; Vercel never shows it again.
+
+### 3. Add two repository secrets
+
+<https://github.com/haidermateen919-code/Repair-Status-Tracker/settings/secrets/actions>
+→ **New repository secret**, twice:
+
+| Name             | Value                                                       |
+| ---------------- | ----------------------------------------------------------- |
+| `PRODUCTION_ENV` | The dotenv block from the deployment checklist (see below). |
+| `VERCEL_TOKEN`   | The token from step 2.                                      |
+
+`PRODUCTION_ENV` is a single multi-line value — every runtime setting in one
+secret, so there is nothing to keep in sync later:
+
+```dotenv
+AUTH_SECRET="..."                 # openssl rand -base64 32
+DATABASE_URL="postgresql://..."   # from step 1
+SEED_OWNER_EMAIL="owner@shop.pk"
+SEED_OWNER_PASSWORD="..."         # 12+ characters
+SEED_OWNER_NAME="Shop Owner"
+SHOP_NAME="Al-Madina Appliances"
+SHOP_PHONE="03001234567"
+SHOP_WHATSAPP="03001234567"
+SHOP_ADDRESS="G-11 Markaz, Islamabad"
+SHOP_TIMINGS="9am–8pm, Monday closed"
+APP_BASE_URL=""                   # optional; only for a custom domain
+```
+
+`deploy.yml` reads this file, exports the values, runs the provisioning script
+against `DATABASE_URL`, and copies the same values into the Vercel project's
+production environment. `APP_BASE_URL` may stay empty: share links are then
+built from the request's forwarded headers, which is correct on Vercel.
 
 ## What the pipeline does
 
-On every push to `main` (or manually via **Actions → Deploy → Run workflow**) it:
+On every push to `main` (or manually via **Actions → Deploy → Run workflow**):
 
-1. installs dependencies and runs the quality gate — typecheck, lint, 229 tests;
-2. runs `npm run provision` against the production database: applies pending
-   migrations, seeds the shop and the single owner account (idempotent — safe to
-   run on every deploy), then prints the resulting shop/owner/job counts;
-3. links (or creates) the Vercel project and syncs `DATABASE_URL`, `AUTH_SECRET`
-   and optionally `APP_BASE_URL` into its production environment;
-4. builds and deploys the prebuilt output;
-5. smoke-tests the live URL: `/login` must return 200 and `/track` must carry
+1. installs dependencies and runs the quality gate — typecheck, lint, tests;
+2. `npm run provision`: applies pending migrations, seeds the shop and the owner
+   account (idempotent — an existing shop or owner is left untouched), and
+   prints the resulting counts;
+3. creates the Vercel project if it does not exist and links it;
+4. pushes the runtime environment variables into the project (secrets stored as
+   sensitive, shop details as readable config);
+5. builds and deploys the prebuilt output to production;
+6. smoke-tests the live URL: `/login` must return 200 and `/track` must send
    `X-Robots-Tag: noindex`.
 
-The job fails loudly if any required secret is missing, so a half-configured
-repository can never ship a broken build.
+The job fails loudly if either secret is missing or a required key is absent
+from `PRODUCTION_ENV`, so a half-configured repository can never ship a broken
+build. The deployment URL is printed in the run summary.
 
-## What must exist
+## Changing configuration later
 
-| Thing                     | Who creates it                              | Notes                                                                                 |
-| ------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Postgres database         | Shop owner (Neon, Supabase, RDS — anything) | Free tier is enough; the app needs one small database and a pooled connection string. |
-| Vercel account + token    | Shop owner                                  | <https://vercel.com/account/tokens> → _Create Token_, scope "Full Account".           |
-| GitHub repository secrets | Shop owner, once                            | See below.                                                                            |
-
-The agent sandbox can reach a Postgres server on port 5432 but **not** the Vercel
-or Neon control-plane APIs, so account creation cannot be scripted from there;
-GitHub Actions runners have full internet access, which is why the deploy lives in
-a workflow.
-
-## Required repository secrets
-
-Generate the long values locally rather than inventing them by hand:
-
-```bash
-openssl rand -base64 32   # AUTH_SECRET  (session signing key)
-openssl rand -base64 24   # SEED_OWNER_PASSWORD (initial owner password)
-```
-
-| Secret                         | Example / source                                                                                                                 |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                 | `postgresql://user:pass@host/db?sslmode=require`                                                                                 |
-| `AUTH_SECRET`                  | 32 random bytes, base64                                                                                                          |
-| `VERCEL_TOKEN`                 | from the Vercel dashboard                                                                                                        |
-| `SEED_OWNER_EMAIL`             | `owner@yourshop.pk`                                                                                                              |
-| `SEED_OWNER_PASSWORD`          | 12+ characters                                                                                                                   |
-| `SEED_OWNER_NAME`              | `Shop Owner`                                                                                                                     |
-| `SHOP_NAME`                    | `Al-Madina Appliances`                                                                                                           |
-| `SHOP_PHONE`                   | `03001234567` (display form)                                                                                                     |
-| `SHOP_WHATSAPP`                | `03001234567` (used for `wa.me` links)                                                                                           |
-| `SHOP_ADDRESS`, `SHOP_TIMINGS` | optional, shown on the public status page                                                                                        |
-| `APP_BASE_URL`                 | optional; set only for a custom domain. Without it, share links use the request's forwarded headers, which is correct on Vercel. |
+Edit the `PRODUCTION_ENV` secret and re-run the workflow (**Actions → Deploy →
+Run workflow**). Both the database and the Vercel project are updated from it.
+Rotating `SEED_OWNER_PASSWORD` only affects a _new_ seed; to change the existing
+owner password use `npm run db:reset-password -- --generate` against production.
 
 ## After the first successful deploy
 
-1. `npm run db:reset-password -- --generate` against production (or change the
-   password from a secure session) so the seeded password is not left in place.
-2. Schedule `npm run db:purge` (deletes delivered jobs older than the retention
-   window) — a Vercel Cron entry or any external scheduler hitting a small
-   endpoint works.
-3. Turn on database backups/PITR in the provider dashboard.
+1. Sign in and change the owner password if it was shared over chat.
+2. Schedule `npm run db:purge` (removes delivered jobs past the retention
+   window) — a Vercel Cron entry pointing at a small route, or any external
+   scheduler.
+3. Turn on the provider's automated backups / point-in-time recovery.
 
 ## Rolling back
 
-Vercel keeps every deployment; promote the previous one from the dashboard.
-Database migrations are forward-only and additive, so an older build keeps
-working against a newer schema.
+Vercel keeps every deployment: promote the previous one from the dashboard.
+Migrations are forward-only and additive, so an older build keeps working
+against a newer schema.

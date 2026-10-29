@@ -1,13 +1,13 @@
 name: Deploy
 
-# Runs where there is unrestricted internet access (GitHub runners).
-# Every push to main that touches application code provisions the database and
-# ships to production; `workflow_dispatch` re-deploys on demand.
+# Runs on GitHub's runners, which have unrestricted internet access (the agent
+# sandbox cannot reach the Vercel API). Every push to main provisions the
+# database and ships to production; `workflow_dispatch` re-deploys on demand.
 on:
   workflow_dispatch:
     inputs:
       provision:
-        description: "Also apply migrations and seed the shop/owner"
+        description: "Apply migrations and seed the shop/owner before deploying"
         type: boolean
         default: true
   push:
@@ -25,47 +25,53 @@ on:
       - ".github/workflows/deploy.yml"
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-production
   cancel-in-progress: false
 
 jobs:
   deploy:
     name: Provision database and deploy to Vercel
     runs-on: ubuntu-latest
-    environment: production
     env:
       NEXT_TELEMETRY_DISABLED: "1"
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      SEED_OWNER_EMAIL: ${{ secrets.SEED_OWNER_EMAIL }}
-      SEED_OWNER_PASSWORD: ${{ secrets.SEED_OWNER_PASSWORD }}
-      SEED_OWNER_NAME: ${{ secrets.SEED_OWNER_NAME }}
-      SHOP_NAME: ${{ secrets.SHOP_NAME }}
-      SHOP_PHONE: ${{ secrets.SHOP_PHONE }}
-      SHOP_WHATSAPP: ${{ secrets.SHOP_WHATSAPP }}
-      SHOP_ADDRESS: ${{ secrets.SHOP_ADDRESS }}
-      SHOP_TIMINGS: ${{ secrets.SHOP_TIMINGS }}
       VERCEL_PROJECT_NAME: repair-status-tracker
-      APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+      # One dotenv-formatted secret keeps the manual setup to a single paste.
+      PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
-      - run: npm ci
-
-      - name: Fail fast on missing configuration
+      - name: Load production configuration
         run: |
+          if [ -z "$PRODUCTION_ENV" ]; then
+            echo "::error::The PRODUCTION_ENV secret is missing. See DEPLOY.md."
+            exit 1
+          fi
+          printf '%s\n' "$PRODUCTION_ENV" > .env
+          chmod 600 .env
+          # Parse KEY=value without shell evaluation, tolerating quoted values
+          # (connection strings contain ? & = and must not be interpreted).
+          while IFS='=' read -r key value; do
+            case "$key" in ''|'#'*) continue ;; esac
+            value="${value%\"}"; value="${value#\"}"
+            value="${value%\'}"; value="${value#\'}"
+            printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
+          done < .env
+
           missing=0
-          for key in DATABASE_URL AUTH_SECRET VERCEL_TOKEN SEED_OWNER_EMAIL SEED_OWNER_PASSWORD SHOP_NAME SHOP_PHONE SHOP_WHATSAPP; do
-            if [ -z "${!key}" ]; then echo "::error::Missing repository secret: $key"; missing=1; fi
+          for key in DATABASE_URL AUTH_SECRET SEED_OWNER_EMAIL SEED_OWNER_PASSWORD SHOP_NAME SHOP_PHONE SHOP_WHATSAPP; do
+            if [ -z "${!key}" ]; then echo "::error::PRODUCTION_ENV is missing $key"; missing=1; fi
           done
+          [ -z "$VERCEL_TOKEN" ] && { echo "::error::The VERCEL_TOKEN secret is missing."; missing=1; }
           exit $missing
+
+      - run: npm ci
 
       - name: Quality gate
         run: |
@@ -73,52 +79,66 @@ jobs:
           npm run lint
           npm test
 
-      - name: Apply migrations and seed
+      - name: Apply migrations and seed the shop
         if: ${{ github.event_name == 'push' || inputs.provision }}
         run: npm run provision
 
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
-      - name: Link project
-        run: vercel link --yes --project "$VERCEL_PROJECT_NAME" --token "$VERCEL_TOKEN"
+      - name: Create or link the Vercel project
+        run: |
+          # `project create` fails harmlessly when the project already exists.
+          vercel project create "$VERCEL_PROJECT_NAME" --token "$VERCEL_TOKEN" >/dev/null 2>&1 || true
+          vercel link --yes --project "$VERCEL_PROJECT_NAME" --token "$VERCEL_TOKEN"
 
       - name: Sync runtime environment variables
         run: |
-          # `add` refuses to overwrite, so remove first. Both are no-ops on a
-          # fresh project; failures here are not fatal.
-          set_env() {
-            name="$1"; value="$2"
-            [ -z "$value" ] && return 0
-            vercel env rm "$name" production --yes --token "$VERCEL_TOKEN" >/dev/null 2>&1 || true
-            printf '%s' "$value" | vercel env add "$name" production --token "$VERCEL_TOKEN" >/dev/null
-            echo "synced $name"
+          # Secrets are stored as sensitive; plain values as readable config.
+          sync_secret() {
+            [ -z "${!1}" ] && return 0
+            vercel env add "$1" production --force --sensitive --value "${!1}" \
+              --token "$VERCEL_TOKEN" --yes >/dev/null
+            echo "synced $1 (secret)"
+          }
+          sync_config() {
+            [ -z "${!1}" ] && return 0
+            vercel env add "$1" production --force --type config --value "${!1}" \
+              --token "$VERCEL_TOKEN" --yes >/dev/null
+            echo "synced $1"
           }
 
-          set_env DATABASE_URL "$DATABASE_URL"
-          set_env AUTH_SECRET "$AUTH_SECRET"
-          # Optional: only needed for a custom domain, otherwise links are
-          # derived from the request's forwarded headers.
-          set_env APP_BASE_URL "$APP_BASE_URL"
+          sync_secret DATABASE_URL
+          sync_secret AUTH_SECRET
+          sync_secret SEED_OWNER_PASSWORD
+          sync_config APP_BASE_URL
+          sync_config SHOP_NAME
+          sync_config SHOP_PHONE
+          sync_config SHOP_WHATSAPP
+          sync_config SHOP_ADDRESS
+          sync_config SHOP_TIMINGS
 
       - name: Build
-        run: vercel pull --yes --environment=production --token "$VERCEL_TOKEN" && vercel build --prod --token "$VERCEL_TOKEN"
+        run: |
+          vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+          vercel build --prod --token "$VERCEL_TOKEN"
 
       - name: Deploy to production
         id: deploy
         run: |
-          url=$(vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN")
+          url=$(vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN" | tail -n 1)
           echo "url=$url" >> "$GITHUB_OUTPUT"
           {
             echo "### Deployed"
             echo ""
             echo "- URL: $url"
-            echo "- Health: $url/login"
+            echo "- Owner area: $url/login"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Smoke test the live deployment
         run: |
           url="${{ steps.deploy.outputs.url }}"
+          code=""
           for attempt in 1 2 3 4 5 6; do
             code=$(curl -s -o /dev/null -w '%{http_code}' "$url/login" || true)
             echo "attempt $attempt: /login -> $code"
@@ -126,7 +146,11 @@ jobs:
             sleep 10
           done
           test "$code" = "200" || { echo "::error::Deployment did not serve /login"; exit 1; }
-          # Public pages must stay out of search engines.
+
+          # Public surfaces must stay out of search engines.
           curl -s -D - -o /dev/null "$url/track" | grep -qi 'x-robots-tag: noindex' \
             || { echo "::error::/track is missing X-Robots-Tag: noindex"; exit 1; }
-          echo "OK: $url"
+
+          echo "### Live" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Smoke tests passed for $url" >> "$GITHUB_STEP_SUMMARY"
